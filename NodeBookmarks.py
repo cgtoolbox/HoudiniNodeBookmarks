@@ -34,6 +34,49 @@ def create_boormark(node):
     else:
         hou.ui.displayMessage("Init Houdini Nodes Bookmark first.")
 
+class CustomInput(QtWidgets.QDialog):
+
+    def __init__(self, label, icon, defaul_value="", parent=None):
+        super(CustomInput, self).__init__(parent=parent)
+        
+        self.setStyleSheet(hou.ui.qtStyleSheet())
+        self.setWindowTitle("Input")
+        self.valid_value = False
+        main_layout = QtWidgets.QVBoxLayout()
+
+        label_layout = QtWidgets.QHBoxLayout()
+        icon_lbl = QtWidgets.QLabel("")
+        icon_lbl.setFixedSize(QtCore.QSize(24, 24))
+        icon_lbl.setPixmap(hou.ui.createQtIcon(icon).pixmap(20,20))
+        label_layout.addWidget(icon_lbl)
+        label_layout.addWidget(QtWidgets.QLabel(label))
+        main_layout.addLayout(label_layout)
+
+        self.input_text = QtWidgets.QLineEdit(defaul_value)
+        main_layout.addWidget(self.input_text)
+
+        main_layout.addWidget(HSep())
+
+        buttons_layout = QtWidgets.QHBoxLayout()
+        self.ok_btn = QtWidgets.QPushButton("Ok")
+        self.ok_btn.clicked.connect(self.validate_input)
+        buttons_layout.addWidget(self.ok_btn)
+
+        self.cancel_btn = QtWidgets.QPushButton("Cancel")
+        self.cancel_btn.clicked.connect(self.close)
+        buttons_layout.addWidget(self.cancel_btn)
+
+        main_layout.addLayout(buttons_layout)
+
+        self.setLayout(main_layout)
+
+    def validate_input(self):
+
+        self.valid_value = True
+        if self.input_text.text().strip() == "":
+            self.valid_value = False
+        self.close()
+
 class VSep(QtWidgets.QFrame):
 
     def __init__(self, parent=None):
@@ -183,7 +226,7 @@ class Separator(QtWidgets.QWidget):
         self.label.setText(v)
 
     def mouseMoveEvent(self, e):
-
+        
         if e.buttons() != QtCore.Qt.LeftButton:
             return
         
@@ -204,8 +247,12 @@ class Separator(QtWidgets.QWidget):
         drag.setHotSpot(e.pos())
         drag.exec_()
 
+    def dragEnterEvent(self, e):
+        e.acceptProposedAction()
+
     def dropEvent(self, e):
 
+        e.acceptProposedAction()
         data = e.mimeData()
         node_path = data.text()
 
@@ -240,7 +287,7 @@ class AddSeparator(QtWidgets.QLabel):
                          "by drag and drop."))
 
     def mouseMoveEvent(self, e):
-
+        
         if e.buttons() != QtCore.Qt.LeftButton:
             return
         
@@ -390,7 +437,10 @@ class Bookmark(QtWidgets.QFrame):
         bookmark_layout.setSpacing(5)
         bookmark_layout.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
 
-        icon = hou.ui.createQtIcon(self.node_type.icon())
+        try:
+            icon = hou.ui.createQtIcon(self.node_type.icon())
+        except hou.OperationFailed:
+            icon = hou.ui.createQtIcon("SOP_subnet")
         self.icon_lbl = QtWidgets.QLabel("")
         self.icon_lbl.setStyleSheet("QLabel{border: 0px}")
         self.icon_lbl.setPixmap(icon.pixmap(28, 28))
@@ -424,7 +474,7 @@ class Bookmark(QtWidgets.QFrame):
 
         color_txt_ico = hou.ui.createQtIcon("houdiniNodeBookmarks_text_color")
         self.edit_txt_color_act = QtWidgets.QAction(color_txt_ico,
-                                                "Edit Text Color", self)
+                                                "Edit Label Color", self)
         self.edit_txt_color_act.triggered.connect(self.pick_txt_color)
         self.menu.addAction(self.edit_txt_color_act)
 
@@ -562,6 +612,7 @@ class Bookmark(QtWidgets.QFrame):
 
     def mouseMoveEvent(self, e):
 
+        e.accept()
         if e.buttons() != QtCore.Qt.LeftButton:
             return
         
@@ -577,6 +628,7 @@ class Bookmark(QtWidgets.QFrame):
 
     def dropEvent(self, e):
         
+        e.accept()
         data = e.mimeData()
         node_path = data.text()
 
@@ -629,31 +681,23 @@ class BookmarkView(QtWidgets.QWidget):
         
         self.setLayout(self.bookmark_view_layout)
 
-    def dragEnterEvent(self, e):
-      
-        if e.mimeData().hasFormat('text/plain'):
-
-            node_path = e.mimeData().text()
-            uid = hashlib.sha1(node_path).hexdigest()
-            
-            if uid in self.bookmarks.keys():
-                e.ignore()
-            else:
-                e.accept()
-        else:
-            e.ignore() 
+    def dragMoveEvent(self, e):
+        
+        e.acceptProposedAction()
 
     def dropEvent(self, e):
         
+        e.acceptProposedAction()
         data = e.mimeData()
         node_path = data.text()
-
+        
         if node_path == "%breaker%":
             self.insert_breaker(len(self.children()))
-            return
+            return True
 
         self.insert_bookmark(node_path,
                              len(self.children()))
+        
               
     def insert_bookmark(self, node_path, idx=0):
 
@@ -666,12 +710,8 @@ class BookmarkView(QtWidgets.QWidget):
         node = hou.node(node_path)
         if node is None:
             return
-
-        v, bookmark_name = hou.ui.readInput("Bookmark name:",
-                                             buttons=["Ok", "Cancel"],
-                                             initial_contents=node.name())
-        if v == 1: return
-
+        
+        bookmark_name = node.name()
         bookmark = Bookmark(node=node,
                             uid=h_node_path,
                             name=bookmark_name,
@@ -684,15 +724,8 @@ class BookmarkView(QtWidgets.QWidget):
         self.refresh_bookmark_ids()
 
     def insert_breaker(self, idx=0):
-
-        v, lbl = hou.ui.readInput("Separator name:",
-                                  buttons=["Ok", "Cancel"],
-                                  initial_contents="Separator")
-        if v == 1: return
-
-        if lbl.strip() == "": return
-
-        b = Separator(lbl, idx, parent=self)
+        
+        b = Separator("Separator", idx, parent=self)
         self.bookmark_view_layout.insertWidget(idx, b)
 
         self.refresh_bookmark_ids()
@@ -731,6 +764,10 @@ class NodesBookmark(QtWidgets.QWidget):
         self.setProperty("houdiniStyle", True)
         main_layout = QtWidgets.QVBoxLayout()
         main_layout.setAlignment(Qt.AlignTop)
+
+        # menu
+        main_menu = QtWidgets.QMenu(self)
+
 
         # toolbar
         toolbar_layout = QtWidgets.QHBoxLayout()
