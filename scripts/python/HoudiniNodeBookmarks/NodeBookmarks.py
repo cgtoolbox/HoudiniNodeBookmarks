@@ -1055,7 +1055,7 @@ class NodesBookmark(QtWidgets.QMainWindow):
         delete_hip_data_act = QtWidgets.QAction(delete_hip_ico,
                                      "Delete hip file data",
                                      self)
-        delete_hip_data_act.triggered.connect(self.open_bookmarks)
+        delete_hip_data_act.triggered.connect(self.delete_hip_file_data)
         main_menu.addAction(delete_hip_data_act)
 
         main_menu.addSeparator()
@@ -1413,6 +1413,8 @@ class NodesBookmark(QtWidgets.QMainWindow):
                                   buttons=["Yes", "Cancel"])
         if r == 1: return
 
+        self.delete_hip_file_data(verbose=False)
+
         code = ("# HOUDINI NODE BOOKMARKS START\n"
                 "def get_node_bookmarks_data():\n"
                 "    data = " + str(bookmark_data)+ "\n"
@@ -1420,11 +1422,12 @@ class NodesBookmark(QtWidgets.QMainWindow):
                 "# HOUDINI NODE BOOKMARKS END\n"
                 )
 
-        hou.setSessionModuleSource(code)
+        cur_data = hou.sessionModuleSource()
+        hou.setSessionModuleSource(cur_data + '\n' + code)
 
     def check_hip_file_data(self, verbose=False):
 
-        if hasattr(hou.session, "get_bookmark_file_data"):
+        if "# HOUDINI NODE BOOKMARKS START\n" in hou.sessionModuleSource():
             data = hou.session.get_bookmark_file_data()
             self.load_from_hip_data(data)
         else:
@@ -1440,6 +1443,39 @@ class NodesBookmark(QtWidgets.QMainWindow):
             hou.ui.displayMessage("Invalid data: " + str(e),
                                   severity=hou.severityType.Error)
             return
+
+    def delete_hip_file_data(self, verbose=True):
+
+        data = hou.sessionModuleSource()
+        if data.strip() == "" or not "# HOUDINI NODE BOOKMARKS START" in data:
+            if verbose:
+                hou.ui.displayMessage("No bookmarks data found in current hip file")
+            return
+
+        if verbose:
+            r = hou.ui.displayMessage("Delete current bookmarks hip file data ?",
+                                      buttons=["Yes", "Cancel"])
+            if r == 1: return
+
+
+        is_bkm_code = False
+        data = data.split('\n')
+        new_data = []
+        for d in data:
+
+            if d.startswith("# HOUDINI NODE BOOKMARKS START"):
+                is_bkm_code = True
+                continue
+
+            if d.startswith("# HOUDINI NODE BOOKMARKS END"):
+                is_bkm_code = False
+                continue
+
+            if not is_bkm_code:
+                new_data.append(d)
+
+        hou.setSessionModuleSource('\n'.join(new_data))
+
 
     def set_bookmark_from_data(self, data):
 
