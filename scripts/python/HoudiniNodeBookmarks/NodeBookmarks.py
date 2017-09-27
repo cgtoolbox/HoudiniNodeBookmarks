@@ -537,53 +537,152 @@ class BookmarkNodeFlags(QtWidgets.QFrame):
         self.node = kwargs["node"]
         self.node_cat = kwargs["node_cat"]
 
-        self.setStyleSheet("""QFrame{background-color: transparent;
-                                     border: 0px}
-                              QFrame:hover{background-color: transparent;
-                                           border: 0px}""")
-
         main_layout = QtWidgets.QHBoxLayout()
         main_layout.setSpacing(2)
         main_layout.setContentsMargins(0,0,0,0)
 
-        self.display_flag_btn = QtWidgets.QPushButton("")
-        self.display_flag_btn.setFixedWidth(18)
-        self.display_flag_btn.setFixedHeight(28)
-        self.display_flag_btn.setIcon(hou.ui.createQtIcon("SOP_visibility"))
-        self.display_flag_btn.setIconSize(QtCore.QSize(12, 12))
-        self.display_flag_btn.setStyleSheet("""QPushButton{
-                                                 background-color: #2772ce;
-                                                 border: 1px solid black}""")
-        main_layout.addWidget(self.display_flag_btn)
+        self.display_bypass_btn = None
+        self.display_flag_btn = None
+        self.display_template_btn = None
+        
+        if hasattr(self.node, "bypass"):
+            self.bypass = self.node.isBypassed()
+            self.display_bypass_btn = QtWidgets.QPushButton("")
+            self.display_bypass_btn.setFixedWidth(18)
+            self.display_bypass_btn.setFixedHeight(28)
+            self.display_bypass_btn.setIcon(hou.ui.createQtIcon("NETVIEW_bypass_flag"))
+            self.display_bypass_btn.setIconSize(QtCore.QSize(12, 12))
+            self.display_bypass_btn.clicked.connect(self.update_bypass_flag)
+            self.display_bypass_btn.setToolTip("Bypass flag")
+            self.update_bypass_flag(init=True)
+            main_layout.addWidget(self.display_bypass_btn)
+        
+        if hasattr(self.node, "setTemplateFlag"):
+            self.display_template_btn = QtWidgets.QPushButton("")
+            self.display_template_btn.setFixedWidth(18)
+            self.display_template_btn.setFixedHeight(28)
+            self.display_template_btn.setIcon(hou.ui.createQtIcon("NETVIEW_template_flag"))
+            self.display_template_btn.setIconSize(QtCore.QSize(12, 12))
+            self.display_template_btn.clicked.connect(self.update_template_flag)
+            self.display_template_btn.setToolTip("Template flag")
+            self.update_template_flag(init=True)
+            main_layout.addWidget(self.display_template_btn)
 
-        self.display_bypass_btn = QtWidgets.QPushButton("")
-        self.display_bypass_btn.setFixedWidth(18)
-        self.display_bypass_btn.setFixedHeight(28)
-        self.display_bypass_btn.setIcon(hou.ui.createQtIcon("SOP_visibility"))
-        self.display_bypass_btn.setIconSize(QtCore.QSize(12, 12))
-        self.display_bypass_btn.setStyleSheet("""QPushButton{
-                                                 background-color: #e7cd2f;
-                                                 border: 1px solid black}""")
-        main_layout.addWidget(self.display_bypass_btn)
-
-        self.display_template_btn = QtWidgets.QPushButton("")
-        self.display_template_btn.setFixedWidth(18)
-        self.display_template_btn.setFixedHeight(28)
-        self.display_template_btn.setIcon(hou.ui.createQtIcon("SOP_visibility"))
-        self.display_template_btn.setIconSize(QtCore.QSize(12, 12))
-        self.display_template_btn.setStyleSheet("""QPushButton{
-                                                 background-color: #dd7dd7;
-                                                 border: 1px solid black}""")
-        main_layout.addWidget(self.display_template_btn)
+        if hasattr(self.node, "setDisplayFlag"):
+            self.display_flag_btn = QtWidgets.QPushButton("")
+            self.display_flag_btn.setObjectName("nodeFlag")
+            self.display_flag_btn.setFixedWidth(18)
+            self.display_flag_btn.setFixedHeight(28)
+            self.display_flag_btn.setIcon(hou.ui.createQtIcon("NETVIEW_display_flag"))
+            self.display_flag_btn.setIconSize(QtCore.QSize(12, 12))
+            self.display_flag_btn.clicked.connect(self.update_display_flag)
+            self.display_flag_btn.setToolTip("Display flag")
+            self.update_display_flag(init=True)
+            main_layout.addWidget(self.display_flag_btn)
 
         self.setLayout(main_layout)
+
+    def set_disabled(self, toggle):
+        
+        if self.display_bypass_btn is not None:
+            self.display_bypass_btn.setDisabled(toggle)
+
+        if self.display_flag_btn is not None:
+            self.display_flag_btn.setDisabled(toggle)
+
+        if self.display_template_btn is not None:
+            self.display_template_btn.setDisabled(toggle)
+
+    def update_display_flag(self, init=False, update_node=True):
+
+        if self.update_display_flag is None:
+            return
+
+        toggle = self.node.isDisplayFlagSet()
+
+        if not init:
+            
+            if update_node:
+                self.node.setDisplayFlag(not toggle)
+                if hasattr(self.node, "setRenderFlag"):
+                    self.node.setRenderFlag(not toggle)
+                toggle = self.node.isDisplayFlagSet()
+        
+        if toggle:
+            col = "#0489bc"
+            col_hov = "#00a5e4"
+        else:
+            col = "#4b4b4b"
+            col_hov = "#707070"
+
+        sty = """QPushButton{{background-color: {0};
+                              border: 1px solid black}}
+                 QPushButton:hover{{background-color: {1};
+                                    border: 1px solid black}}""".format(col, col_hov)
+
+        self.display_flag_btn.setStyleSheet(sty)
+
+    def update_template_flag(self, init=False, update_node=True):
+
+        if self.display_template_btn is None:
+            return
+
+        toggle = self.node.isTemplateFlagSet()
+
+        if not init:
+            
+            if update_node:
+                self.node.setTemplateFlag(not toggle)
+                toggle = self.node.isTemplateFlagSet()
+        
+        if toggle:
+            col = "#dd7dd7"
+            col_hov = "#ff82f7"
+        else:
+            col = "#4b4b4b"
+            col_hov = "#707070"
+
+        sty = """QPushButton{{background-color: {0};
+                              border: 1px solid black}}
+                 QPushButton:hover{{background-color: {1};
+                                    border: 1px solid black}}""".format(col, col_hov)
+
+        self.display_template_btn.setStyleSheet(sty)
+
+    def update_bypass_flag(self, init=False, update_node=True):
+
+        if self.display_bypass_btn is None:
+            return
+
+        toggle = self.node.isBypassed()
+
+        if not init:
+            
+            if update_node:
+                self.node.bypass(not toggle)
+                toggle = self.node.isBypassed()
+        
+        if toggle:
+            col = "#b6a642"
+            col_hov = "#cdba47"
+        else:
+            col = "#4b4b4b"
+            col_hov = "#707070"
+
+        sty = """QPushButton{{background-color: {0};
+                              border: 1px solid black}}
+                 QPushButton:hover{{background-color: {1};
+                                    border: 1px solid black}}""".format(col, col_hov)
+
+        self.display_bypass_btn.setStyleSheet(sty)
+
 
 
 class Bookmark(QtWidgets.QFrame):
 
     def __init__(self, **kwargs):
         super(Bookmark, self).__init__(parent=kwargs["parent"])
-
+        
         self.setProperty("houdiniStyle", True)
         self.setFixedHeight(32)
         self.setAutoFillBackground(True)
@@ -633,10 +732,10 @@ class Bookmark(QtWidgets.QFrame):
         
         self.setToolTip(self.node_path)
 
-        bookmark_layout = QtWidgets.QHBoxLayout()
-        bookmark_layout.setSpacing(5)
-        bookmark_layout.setContentsMargins(5,2,2,2)
-        bookmark_layout.setAlignment(Qt.AlignLeft)
+        self.bookmark_layout = QtWidgets.QHBoxLayout()
+        self.bookmark_layout.setSpacing(5)
+        self.bookmark_layout.setContentsMargins(5,2,2,2)
+        self.bookmark_layout.setAlignment(Qt.AlignLeft)
 
         try:
             icon = hou.ui.createQtIcon(self.node_type.icon())
@@ -647,15 +746,19 @@ class Bookmark(QtWidgets.QFrame):
         self.icon_lbl.setPixmap(icon.pixmap(22, 22))
         self.icon_lbl.setFixedHeight(22)
         self.icon_lbl.setFixedWidth(22)
-        bookmark_layout.addWidget(self.icon_lbl)
+        self.icon_lbl.setVisible(ConfigFile.get_display_pref("show_icon"))
+        
+        self.bookmark_layout.addWidget(self.icon_lbl)
 
         self.label = QtWidgets.QLabel(self.bookmark_name)
         self.label.setObjectName("bookmarkName")
-        bookmark_layout.addWidget(self.label)
+        self.label.setVisible(ConfigFile.get_display_pref("show_label"))
+        self.bookmark_layout.addWidget(self.label)
         
         self.type_name_label = QtWidgets.QLabel('(' + self.node_type.name() + ')')
         self.type_name_label.setObjectName("nodeTypeName")
-        bookmark_layout.addWidget(self.type_name_label)
+        self.type_name_label.setVisible(ConfigFile.get_display_pref("show_type"))
+        self.bookmark_layout.addWidget(self.type_name_label)
 
         # right click menu
         self.menu = QtWidgets.QMenu(self)
@@ -699,20 +802,22 @@ class Bookmark(QtWidgets.QFrame):
         self.customContextMenuRequested.connect(self.pop_menu)
 
         # add flags
-        bookmark_layout.addStretch(1)
+        self.bookmark_layout.addStretch(1)
         self.node_flags = BookmarkNodeFlags(node=self.node,
                                             node_cat=self.node_cat,
                                             parent=self)
-        bookmark_layout.addWidget(self.node_flags)
+        self.node_flags.setVisible(ConfigFile.get_display_pref("show_flags"))
+        self.bookmark_layout.addWidget(self.node_flags)
 
         # end of setup
 
-        self.setLayout(bookmark_layout)
+        self.setLayout(self.bookmark_layout)
         self.set_colors()
 
         self.callback_types = (hou.nodeEventType.NameChanged,
                                hou.nodeEventType.BeingDeleted,
-                               hou.nodeEventType.ChildCreated)
+                               hou.nodeEventType.ChildCreated,
+                               hou.nodeEventType.FlagChanged)
         self.clean_node_callbacks()
         self.node.addEventCallback(self.callback_types,
                                    self.node_callback)
@@ -742,12 +847,19 @@ class Bookmark(QtWidgets.QFrame):
                 self.bookmark_name = self.node_name
                 self.label.setText(self.node_name)
 
+        elif kwargs["event_type"] == hou.nodeEventType.FlagChanged:
+            
+            self.node_flags.update_display_flag(update_node=False)
+            self.node_flags.update_template_flag(update_node=False)
+            self.node_flags.update_bypass_flag(update_node=False)
+
         elif kwargs["event_type"] == hou.nodeEventType.BeingDeleted:
 
             if ConfigFile.get_ui_prefs("auto_delete_bookmark"):
                 self.remove_me(True)
             else:
                 self.icon_lbl.setDisabled(True)
+                self.node_flags.set_disabled(True)
                 self.setToolTip(("Bookmark not available, "
                                  "node '{}' was deleted.".format(self.node_path)))
             
@@ -872,7 +984,7 @@ class Bookmark(QtWidgets.QFrame):
                                          bg_hover_color))
 
     def mouseDoubleClickEvent(self, e):
-
+        
         n = hou.node(self.node_path)
         if not n:
             r = hou.ui.displayMessage(("Node doesn't exist anymore,"
@@ -1281,7 +1393,7 @@ class NodesBookmark(QtWidgets.QMainWindow):
         self.show_flags_btn.setCheckable(True)
         self.show_flags_btn.setChecked(ConfigFile.get_display_pref("show_flags"))
         self.show_flags_btn.setToolTip("Show bookmark node's flags")
-        self.show_flags_btn.clicked.connect(self.update_type)
+        self.show_flags_btn.clicked.connect(self.update_flags)
         self.show_flags_btn.setVisible(ConfigFile.get_ui_prefs("display_options"))
         toolbar_layout.addWidget(self.show_flags_btn)
 
@@ -1412,7 +1524,8 @@ class NodesBookmark(QtWidgets.QMainWindow):
 
         bookmark_data["options"] = {"show_icons":self.show_icon_btn.isChecked(),
                                     "show_labels":self.show_label_btn.isChecked(),
-                                    "show_types":self.show_type_btn.isChecked()}
+                                    "show_types":self.show_type_btn.isChecked(),
+                                    "show_flags":self.show_flags_btn.isChecked()}
 
         return bookmark_data
 
@@ -1451,6 +1564,18 @@ class NodesBookmark(QtWidgets.QMainWindow):
                 w.type_name_label.hide()
 
         self.update_display_options("show_type")
+
+    def update_flags(self):
+
+        state = self.show_flags_btn.isChecked()
+        for w in self.get_bookmarks():
+
+            if state:
+                w.node_flags.show()
+            else:
+                w.node_flags.hide()
+        
+        self.update_display_options("show_flags")
 
     def update_network_linked(self, choices):
 
@@ -1730,6 +1855,7 @@ class NodesBookmark(QtWidgets.QMainWindow):
             self.show_icon_btn.setVisible(val)
             self.show_type_btn.setVisible(val)
             self.show_label_btn.setVisible(val)
+            self.show_flags_btn.setVisible(val)
             self.toolbar_sep.setVisible(val)
             self.add_separator_btn.setVisible(val)
 
@@ -1753,6 +1879,8 @@ class NodesBookmark(QtWidgets.QMainWindow):
             val = self.show_icon_btn.isChecked()
         elif opt == "show_label":
             val = self.show_label_btn.isChecked()
+        elif opt == "show_flags":
+            val = self.show_flags_btn.isChecked()
         else:
             val = self.show_type_btn.isChecked()
         
