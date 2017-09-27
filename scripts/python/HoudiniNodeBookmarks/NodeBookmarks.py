@@ -595,7 +595,7 @@ class BookmarkNodeFlags(QtWidgets.QFrame):
 
     def update_display_flag(self, init=False, update_node=True):
 
-        if self.update_display_flag is None:
+        if self.display_flag_btn is None:
             return
 
         toggle = self.node.isDisplayFlagSet()
