@@ -172,9 +172,9 @@ class Separator(QtWidgets.QWidget):
 
     def __init__(self, label, id=0, parent=None):
         super(Separator, self).__init__(parent=parent)
+
         main_layout = QtWidgets.QHBoxLayout()
         self.setAutoFillBackground(True)
-        self.setAcceptDrops(True)
 
         self.id = id
         self.bookmarkview = parent
@@ -265,7 +265,7 @@ class Separator(QtWidgets.QWidget):
         return widgets           
 
     def collapse(self):
-
+        
         if self.collapsed:
             self.collapsed = False
             self.collapse_btn.setIcon(hou.ui.createQtIcon(r"HoudiniNodeBookmarks\down"))
@@ -279,12 +279,25 @@ class Separator(QtWidgets.QWidget):
             self.collapsed = True
             self.collapse_btn.setIcon(hou.ui.createQtIcon(r"HoudiniNodeBookmarks\right"))
             
-            widgets = self.find_widgets_to_collapse()
+            widgets = self.find_widgets_to_collapse()[:-1]
             for w in widgets:
                 w.collapsed = True
                 w.hide()
 
-            self.collapsed_label.setText("(" + str(len(widgets)) + ")")
+        self.update_collapse_label()
+
+    def update_collapse_label(self):
+
+        if not self.collapsed:
+            self.collapsed_label.hide()
+            self.collapse_btn.setIcon(hou.ui.createQtIcon(r"HoudiniNodeBookmarks\down"))
+            return
+
+        nitems = len([w for w in self.find_widgets_to_collapse() if \
+                      isinstance(w, Bookmark)])
+        self.collapsed_label.setText("(" + str(nitems) + ")")
+        self.collapse_btn.setIcon(hou.ui.createQtIcon(r"HoudiniNodeBookmarks\right"))
+        self.collapsed_label.show()
 
     def data(self):
 
@@ -298,8 +311,16 @@ class Separator(QtWidgets.QWidget):
 
     def remove_me(self):
 
+        it = self.bookmarkview.bookmark_view_layout.itemAt(self.id + 1)
+        if it:
+            w = it.widget()
+            if isinstance(w, InterWidget):
+                w.setParent(None)
+                w.deleteLater()
+
         self.setParent(None)
         self.deleteLater()
+        
         self.bookmarkview.refresh_bookmark_ids()
 
     def edit_label(self):
@@ -322,6 +343,8 @@ class Separator(QtWidgets.QWidget):
         if c.isValid():
             color = [c.red(), c.green(), c.blue()]
             for w in self.find_widgets_to_collapse():
+                if isinstance(w, InterWidget):
+                    continue
                 w.color = color
                 w.set_colors()
 
@@ -355,6 +378,11 @@ class Separator(QtWidgets.QWidget):
         else:
             self.collapsed_children = []
 
+        painter = QtGui.QPainter(pixmap)
+        painter.setCompositionMode(painter.CompositionMode_DestinationIn)
+        painter.fillRect(pixmap.rect(), QtGui.QColor(0, 0, 0, 150))
+        painter.end()
+
         drag = QtGui.QDrag(self)
         drag.setMimeData(mimeData)
         drag.setPixmap(pixmap)
@@ -363,36 +391,6 @@ class Separator(QtWidgets.QWidget):
 
     def dragEnterEvent(self, e):
         e.acceptProposedAction()
-
-    def dropEvent(self, e):
-
-        e.acceptProposedAction()
-        data = e.mimeData()
-        node_path = data.text()
-
-        if node_path == "%breaker%":
-            self.bookmarkview.insert_separator(self.id)
-            return True
-
-        if "|%|" in node_path:
-
-            id = int(node_path.split("|%|")[-1])
-            it = self.bookmarkview.bookmark_view_layout.itemAt(id)
-            w = it.widget()
-            if isinstance(w, Separator):
-                print w.collapsed_children
-            c = w.copy(self.bookmarkview)
-            self.bookmarkview.bookmark_view_layout.removeItem(it)
-            w.setParent(None)
-            w.deleteLater()
-            self.bookmarkview.bookmark_view_layout.insertWidget(self.id, c)
-            
-            self.bookmarkview.refresh_bookmark_ids()
-            
-        else:
-            self.bookmarkview.insert_bookmark(node_path, self.id + 1)
-
-        return True
 
 class AddSeparator(QtWidgets.QPushButton):
 
@@ -676,6 +674,106 @@ class BookmarkNodeFlags(QtWidgets.QFrame):
 
         self.display_bypass_btn.setStyleSheet(sty)
 
+class InterWidget(QtWidgets.QFrame):
+
+    def __init__(self, parent=None):
+        super(InterWidget, self).__init__(parent=parent)
+
+        self.id = 0
+        self.bookmarkview = parent
+        self.setFixedHeight(4)
+        self.setAcceptDrops(True)
+        
+        self.setStyleSheet("background-color: transparent")
+
+    def enterEvent(self, e):
+        
+        self.setStyleSheet(("background-color: "
+                            "rgba(128,128,128,50)"))
+
+    def leaveEvent(self, e):
+
+        self.setStyleSheet("background-color: transparent")
+
+    def dragLeaveEvent(self, e):
+
+        self.setFixedHeight(4)
+        self.setStyleSheet("background-color: transparent")
+
+    def dragEnterEvent(self, e):
+
+        self.setFixedHeight(20)
+        self.setStyleSheet("background-color: #626262")
+
+    def dropEvent(self, e):
+
+        self.setFixedHeight(4)
+        self.setStyleSheet("background-color: transparent")
+
+        e.accept()
+        src_w = e.source()
+        data = e.mimeData()
+        node_path = data.text()
+
+        if isinstance(src_w, AddSeparator):
+            s_idx = self.bookmarkview.bookmark_view_layout.indexOf(self)
+            self.bookmarkview.insert_separator(s_idx)
+
+        elif isinstance(src_w, Bookmark) or isinstance(src_w, Separator):
+            
+            src_id = self.bookmarkview.bookmark_view_layout.indexOf(src_w)
+            s_idx = self.bookmarkview.bookmark_view_layout.indexOf(self)
+
+            # check if the iterwidget is not the direct interwidget or src w
+            prev_it = self.bookmarkview.bookmark_view_layout.itemAt(s_idx - 1)
+            if prev_it:
+                prev_w = prev_it.widget()
+                if isinstance(prev_w, Bookmark) or isinstance(prev_w, Separator):
+                    if prev_w.id == src_id:
+                        return
+
+            inter_w_it = self.bookmarkview.bookmark_view_layout.itemAt(src_id + 1)
+            inter_w = inter_w_it.widget()
+            
+            self.bookmarkview.bookmark_view_layout.removeWidget(src_w)
+            self.bookmarkview.bookmark_view_layout.removeWidget(inter_w)
+            
+            s_idx = self.bookmarkview.bookmark_view_layout.indexOf(self)
+
+            if isinstance(src_w, Separator) and src_w.collapsed_children:
+                self.bookmarkview.bookmark_view_layout.insertWidget(s_idx + 1, src_w)
+            else:
+                self.bookmarkview.bookmark_view_layout.insertWidget(s_idx, src_w)
+
+            idx = self.bookmarkview.bookmark_view_layout.indexOf(src_w)
+            self.bookmarkview.bookmark_view_layout.insertWidget(idx, inter_w)
+
+            if isinstance(src_w, Separator):
+                
+                widget_col = src_w.collapsed_children
+                
+                if widget_col:
+                    
+                    for i, wc in enumerate(widget_col):
+                        self.bookmarkview.bookmark_view_layout.removeWidget(wc)
+
+                    idx = self.bookmarkview.bookmark_view_layout.indexOf(src_w) + 1
+
+                    for i, wc in enumerate(widget_col):
+                        self.bookmarkview.bookmark_view_layout.insertWidget(idx + i, wc)
+                        wc.show()
+
+                    src_w.collapsed_children = []
+                    src_w.collapsed = False
+                    src_w.update_collapse_label()
+
+            self.bookmarkview.refresh_bookmark_ids()
+
+        else:
+            self.bookmarkview.insert_bookmark(node_path, self.id)
+
+        return True
+
 
 
 class Bookmark(QtWidgets.QFrame):
@@ -687,7 +785,6 @@ class Bookmark(QtWidgets.QFrame):
         self.setFixedHeight(32)
         self.setAutoFillBackground(True)
         self.setObjectName("bookmark")
-        self.setAcceptDrops(True)
 
         self.collapsed = False
 
@@ -890,6 +987,13 @@ class Bookmark(QtWidgets.QFrame):
 
     def remove_me(self, refresh_ids=True):
 
+        it = self.bookmarkview.bookmark_view_layout.itemAt(self.id + 1)
+        if it:
+            w = it.widget()
+            if isinstance(w, InterWidget):
+                w.setParent(None)
+                w.deleteLater()
+
         self.setParent(None)
         self.deleteLater()
         if self.uid in self.bookmarkview.bookmarks.keys():
@@ -1019,53 +1123,16 @@ class Bookmark(QtWidgets.QFrame):
         mimeData = QtCore.QMimeData()
         mimeData.setText("bookmark|%|" + str(self.id))
 
+        painter = QtGui.QPainter(pixmap)
+        painter.setCompositionMode(painter.CompositionMode_DestinationIn)
+        painter.fillRect(pixmap.rect(), QtGui.QColor(0, 0, 0, 150))
+        painter.end()
+
         drag = QtGui.QDrag(self)
         drag.setMimeData(mimeData)
         drag.setPixmap(pixmap)
         drag.setHotSpot(e.pos())
         drag.exec_()
-
-    def dropEvent(self, e):
-        
-        e.accept()
-        data = e.mimeData()
-        node_path = data.text()
-
-        if node_path == "%breaker%":
-            self.bookmarkview.insert_separator(self.id)
-
-        elif "|%|" in node_path:
-
-            id = int(node_path.split("|%|")[-1])
-            it = self.bookmarkview.bookmark_view_layout.itemAt(id)
-            w = it.widget()
-            c = w.copy(self.bookmarkview)
-            self.bookmarkview.bookmark_view_layout.removeItem(it)
-            w.setParent(None)
-            w.deleteLater()
-            self.bookmarkview.bookmark_view_layout.insertWidget(self.id, c)
-            self.bookmarkview.bookmark_view_layout.update()
-            
-            # if it is a separator, check if any collapsed widgets
-            # need to be moved
-            if isinstance(w, Separator):
-
-                colw = w.collapsed_children
-                w.collapsed_children = []
-                w.collapsed = False
-
-                for i, _w in enumerate(colw):
-                    copyw = _w.copy(self.bookmarkview)
-                    _w.remove_me(False)
-                    self.bookmarkview.bookmark_view_layout.insertWidget(self.id,
-                                                                        copyw)
-            
-            self.bookmarkview.refresh_bookmark_ids()
-
-        else:
-            self.bookmarkview.insert_bookmark(node_path, self.id)
-
-        return True
 
 class BookmarkView(QtWidgets.QWidget):
 
@@ -1079,7 +1146,9 @@ class BookmarkView(QtWidgets.QWidget):
         self.bookmarks = {}
 
         self.bookmark_view_layout = QtWidgets.QVBoxLayout()
+        self.bookmark_view_layout.setSpacing(1)
         self.bookmark_view_layout.setAlignment(Qt.AlignTop)
+        self.bookmark_view_layout.addWidget(InterWidget(self))
         
         self.setLayout(self.bookmark_view_layout)
 
@@ -1122,17 +1191,23 @@ class BookmarkView(QtWidgets.QWidget):
     def dropEvent(self, e):
         
         e.acceptProposedAction()
-
+        src_w = e.source()
         data = e.mimeData()
         node_path = data.text()
         
-        if node_path == "%breaker%":
+        if isinstance(src_w, AddSeparator):
             self.insert_separator(len(self.children()))
             return True
 
         self.insert_bookmark(node_path,
                              len(self.children()))  
         return True
+
+    def move_widget(self, widget, idx):
+
+        self.bookmark_view_layout.removeWidget(widget)
+        self.bookmark_view_layout.insertWidget(widget, idx)
+        self.refresh_bookmark_ids()
               
     def insert_bookmark(self, node_path, idx=-1):
 
@@ -1170,6 +1245,9 @@ class BookmarkView(QtWidgets.QWidget):
         self.bookmarks[h_node_path] = bookmark
         self.bookmark_view_layout.insertWidget(idx, bookmark)
         
+        iterw = InterWidget(parent=self)
+        self.bookmark_view_layout.addWidget(iterw)
+
         self.refresh_bookmark_ids()
         self.bookmark_view_layout.update()
         self.update()
@@ -1183,6 +1261,8 @@ class BookmarkView(QtWidgets.QWidget):
 
         b = Separator(breaker_name, idx, parent=self)
         self.bookmark_view_layout.insertWidget(idx, b)
+        _idx = self.bookmark_view_layout.indexOf(b)
+        self.bookmark_view_layout.insertWidget(_idx, InterWidget(self))
 
         self.refresh_bookmark_ids()
 
@@ -1193,6 +1273,7 @@ class BookmarkView(QtWidgets.QWidget):
             it = self.bookmark_view_layout.itemAt(i)
             if it:
                 w = it.widget()
+
                 if w:
                     w.id = i
 
