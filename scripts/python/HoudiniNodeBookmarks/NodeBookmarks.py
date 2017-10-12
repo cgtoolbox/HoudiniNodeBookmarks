@@ -11,7 +11,6 @@ from PySide2 import QtCore
 Qt = QtCore.Qt
 
 import HoudiniNodeBookmarks
-from HoudiniNodeBookmarks import PyPanelCache
 
 ver = hou.applicationVersion()
 
@@ -90,7 +89,6 @@ def remove_bookmark():
 def init_bookmark_view():
 
     w = NodesBookmark()
-    PyPanelCache.PYPANEL_CACHE["pypanel"] = w
     return w
 
 class Config():
