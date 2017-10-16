@@ -66,9 +66,16 @@ def add_bookmark():
     node, interfaces = _get_selection_and_interfaces()
     if not node: return
 
+    node_bkm_ui = None
     for i in interfaces:
         w = i.activeInterfaceRootWidget()
         w.bookmark_view.insert_bookmark(node.path())
+        node_bkm_ui = w
+    
+    if node_bkm_ui:
+        auto_save = ConfigFile.get_ui_prefs("auto_save_to_hip")
+        if auto_save:
+            node_bkm_ui.save_to_hip(verbose=False)
 
 def remove_bookmark():
 
@@ -76,15 +83,22 @@ def remove_bookmark():
     if not node: return
 
     bkm_found = False
+    node_bkm_ui = None
     for i in interfaces:
         w = i.activeInterfaceRootWidget()
         bkm = w.bookmark_view.get_bookmark(node.path())
         if bkm:
             bkm_found = True
             bkm.remove_me()
+            node_bkm_ui = w
 
     if not bkm_found:
         hou.ui.displayMessage("Selected node is not saved as bookmark")
+    else:
+        if node_bkm_ui:
+            auto_save = ConfigFile.get_ui_prefs("auto_save_to_hip")
+            if auto_save:
+                node_bkm_ui.save_to_hip(verbose=False)
 
 def init_bookmark_view():
 
@@ -775,8 +789,8 @@ class InterWidget(QtWidgets.QFrame):
         src_w = e.source()
         data = e.mimeData()
         node_path = data.text()
-
-        if isinstance(src_w, AddSeparator):
+        
+        if isinstance(src_w, QtWidgets.QPushButton):
             s_idx = self.bookmarkview.bookmark_view_layout.indexOf(self)
             self.bookmarkview.insert_separator(s_idx)
 
@@ -832,6 +846,10 @@ class InterWidget(QtWidgets.QFrame):
 
         else:
             self.bookmarkview.insert_bookmark(node_path, self.id)
+
+        auto_save = ConfigFile.get_ui_prefs("auto_save_to_hip")
+        if auto_save:
+            self.bookmarkview.nodeBookmarks.save_to_hip(verbose=False)
 
         return True
 
@@ -1437,12 +1455,16 @@ class NodesBookmark(QtWidgets.QMainWindow):
 
         self.create_bkm_act = QtWidgets.QAction("Add selected node as bookmark",
                                                      self)
-        self.create_bkm_act.triggered.connect(lambda: self.update_opts("ask_for_name"))
+        add_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\add")
+        self.create_bkm_act.setIcon(add_ico)
+        self.create_bkm_act.triggered.connect(add_bookmark)
         options_menu.addAction(self.create_bkm_act)
 
         self.rem_bkm_act = QtWidgets.QAction("Remove selected node from bookmarks",
                                                   self)
-        self.rem_bkm_act.triggered.connect(lambda: self.update_opts("ask_for_name"))
+        rem_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\close")
+        self.rem_bkm_act.setIcon(rem_ico)
+        self.rem_bkm_act.triggered.connect(remove_bookmark)
         options_menu.addAction(self.rem_bkm_act)
 
         options_menu.addSeparator()
@@ -1474,6 +1496,15 @@ class NodesBookmark(QtWidgets.QMainWindow):
         self.auto_del_bkm_act.triggered.connect(lambda: self.update_opts("auto_delete_bookmark"))
 
         options_menu.addAction(self.auto_del_bkm_act)
+
+        options_menu.addSeparator()
+
+        self.auto_save_act = QtWidgets.QAction("Auto save bookmarks to hip", self)
+        self.auto_save_act.setCheckable(True)
+        self.auto_save_act.setChecked(ConfigFile.get_ui_prefs("auto_save_to_hip"))
+        self.auto_save_act.triggered.connect(lambda: self.update_opts("auto_save_to_hip"))
+        
+        options_menu.addAction(self.auto_save_act)
 
         menu_bar.addMenu(options_menu)
 
@@ -1659,8 +1690,16 @@ class NodesBookmark(QtWidgets.QMainWindow):
 
     def get_bookmarks(self):
 
-        return [c for c in self.bookmark_view.children() if \
-                isinstance(c, Bookmark)]
+        bookmarks = []
+        for i in range(self.bookmark_view.bookmark_view_layout.count()):
+            it = self.bookmark_view.bookmark_view_layout.itemAt(i)
+            if not it: continue
+            w = it.widget()
+            if not w: continue
+            if isinstance(w, Bookmark):
+                bookmarks.append(w)
+
+        return bookmarks
 
     def get_bookmark_file_data(self):
 
@@ -1776,6 +1815,10 @@ class NodesBookmark(QtWidgets.QMainWindow):
         self.bookmark_view.bookmark_view_layout.update()
         self.bookmark_view.update()
 
+        auto_save = ConfigFile.get_ui_prefs("auto_save_to_hip")
+        if auto_save:
+            self.delete_hip_file_data(verbose=False)
+
     def open_bookmarks(self, bkm_file=""):
 
         if bkm_file == "":
@@ -1813,14 +1856,15 @@ class NodesBookmark(QtWidgets.QMainWindow):
                       ensure_ascii=False,
                       indent=4)
 
-    def save_to_hip(self):
+    def save_to_hip(self, verbose=True):
 
         bookmark_data = self.get_bookmark_file_data()
         if not bookmark_data: return
 
-        r = hou.ui.displayMessage("Save current bookmarks to hip file ?",
-                                  buttons=["Yes", "Cancel"])
-        if r == 1: return
+        if verbose:
+            r = hou.ui.displayMessage("Save current bookmarks to hip file ?",
+                                      buttons=["Yes", "Cancel"])
+            if r == 1: return
 
         self.delete_hip_file_data(verbose=False)
 
@@ -2006,6 +2050,9 @@ class NodesBookmark(QtWidgets.QMainWindow):
 
         elif opt == "auto_delete_bookmark":
             val = str(self.auto_del_bkm_act.isChecked()).lower()
+
+        elif opt == "auto_save_to_hip":
+            val = str(self.auto_save_act.isChecked()).lower()
 
         elif opt == "display_options":
 
