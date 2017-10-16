@@ -418,10 +418,9 @@ class Separator(QtWidgets.QWidget):
         if c.isValid():
             color = [c.red(), c.green(), c.blue()]
             for w in self.find_widgets_to_collapse():
-                if isinstance(w, InterWidget):
-                    continue
-                w.color = color
-                w.set_colors()
+                if hasattr(w, "set_colors"):
+                    w.color = color
+                    w.set_colors()
 
     def pick_txt_color(self):
 
@@ -1937,7 +1936,7 @@ class NodesBookmark(QtWidgets.QMainWindow):
             return
 
         if self.bookmark_view.bookmark_view_layout.count() == 0:
-            self.bookmark_view.bookmark_view_layout.addWidget(InterWidget(self))
+            self.bookmark_view.bookmark_view_layout.addWidget(InterWidget(self.bookmark_view))
 
         for bkm in bookmarks:
             
@@ -1978,7 +1977,7 @@ class NodesBookmark(QtWidgets.QMainWindow):
 
                 self.bookmark_view.bookmark_view_layout.addWidget(s)
 
-            self.bookmark_view.bookmark_view_layout.addWidget(InterWidget(self))
+            self.bookmark_view.bookmark_view_layout.addWidget(InterWidget(self.bookmark_view))
 
         self.bookmark_view.refresh_bookmark_ids()
         self.bookmark_view.bookmark_view_layout.update()
