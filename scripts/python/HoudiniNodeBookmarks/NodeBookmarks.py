@@ -5,6 +5,7 @@ import time
 import json
 import tempfile
 import ConfigParser
+import webbrowser
 from PySide2 import QtWidgets
 from PySide2 import QtGui
 from PySide2 import QtCore
@@ -22,6 +23,8 @@ IDENT_NETWORK_IMG = os.path.join(*_img)
 
 RECENTS_FILE = tempfile.gettempdir() + os.sep + "houdiniNodeBkm_recents.tmp"
 CONFIG_FILE = os.path.dirname(__file__) + os.sep + "config.ini"
+
+HELP_URL = "http://cgtoolbox.com/houdini-node-bookmarks-2/"
 
 def create_bookmarks_interface():
 
@@ -243,6 +246,37 @@ class HSep(QtWidgets.QFrame):
         self.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
                            QtWidgets.QSizePolicy.Minimum)
 
+class About(QtWidgets.QDialog):
+
+    def __init__(self, parent=None):
+        super(About, self).__init__(parent=parent)
+
+        self.setWindowTitle("About")
+
+        main_layout = QtWidgets.QVBoxLayout()
+        main_layout.setAlignment(Qt.AlignTop)
+
+        main_layout.addWidget(QtWidgets.QLabel("Houdini Node Bookmarks"))
+        main_layout.addWidget(QtWidgets.QLabel(""))
+
+        v = HoudiniNodeBookmarks.__VERSION__
+        main_layout.addWidget(QtWidgets.QLabel("Version: " + v))
+
+        link = '''<a href='http://cgtoolbox.com'>cgtoolbox.com</a>'''
+        inf = QtWidgets.QLabel("More infos and help: " + link)
+        inf.setOpenExternalLinks(True)
+        main_layout.addWidget(inf)
+
+        main_layout.addWidget(QtWidgets.QLabel("Created by: Guillaume Jobst"))
+
+        main_layout.addWidget(QtWidgets.QLabel(""))
+
+        btn = QtWidgets.QPushButton("Close")
+        btn.clicked.connect(self.close)
+        main_layout.addWidget(btn)
+
+        self.setLayout(main_layout)
+                                            
 class Separator(QtWidgets.QWidget):
 
     def __init__(self, label, id=0, parent=None):
@@ -861,6 +895,7 @@ class Bookmark(QtWidgets.QFrame):
         self.setFixedHeight(32)
         self.setAutoFillBackground(True)
         self.setObjectName("bookmark")
+        self.setMouseTracking(True)
 
         self.collapsed = False
 
@@ -1191,7 +1226,11 @@ class Bookmark(QtWidgets.QFrame):
                              1)
 
     def mouseMoveEvent(self, e):
-        
+
+        msg = "Node: " + self.node_path
+        self.bookmarkview.nodeBookmarks.statusBar.showMessage(msg,
+                                                              1500)
+
         if e.buttons() != QtCore.Qt.LeftButton:
             return
         
@@ -1383,6 +1422,9 @@ class NodesBookmark(QtWidgets.QMainWindow):
     def __init__(self):
         super(NodesBookmark, self).__init__()
 
+        self.statusBar = QtWidgets.QStatusBar()
+        self.setStatusBar(self.statusBar)
+        
         cw = QtWidgets.QWidget()
 
         self.setProperty("houdiniStyle", True)
@@ -1521,7 +1563,7 @@ class NodesBookmark(QtWidgets.QMainWindow):
         about_act = QtWidgets.QAction(about_ico,
                                       "About",
                                       self)
-        help_act.triggered.connect(self.show_about)
+        about_act.triggered.connect(self.show_about)
         help_menu.addAction(about_act)
         
         menu_bar.addMenu(help_menu)
@@ -1695,7 +1737,7 @@ class NodesBookmark(QtWidgets.QMainWindow):
             if not it: continue
             w = it.widget()
             if not w: continue
-            if isinstance(w, Bookmark):
+            if hasattr(w, "bookmark_name"):
                 bookmarks.append(w)
 
         return bookmarks
@@ -2103,9 +2145,8 @@ class NodesBookmark(QtWidgets.QMainWindow):
 
     def show_help(self):
 
-        return
+        webbrowser.open(HELP_URL)
 
     def show_about(self):
 
-        return
-
+        About(parent=self).exec_()
