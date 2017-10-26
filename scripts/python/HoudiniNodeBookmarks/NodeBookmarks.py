@@ -1066,10 +1066,16 @@ class Bookmark(QtWidgets.QFrame):
             if ConfigFile.get_ui_prefs("auto_delete_bookmark"):
                 self.remove_me(True)
             else:
-                self.icon_lbl.setDisabled(True)
-                self.node_flags.set_disabled(True)
+                self.set_disabled()
                 self.setToolTip(("Bookmark not available, "
                                  "node '{}' was deleted.".format(self.node_path)))
+
+    def set_disabled(self):
+
+        self.icon_lbl.setDisabled(True)
+        self.label.setDisabled(True)
+        self.node_flags.set_disabled(True)
+        self.setStyleSheet("background-color: rgb(20, 20, 20)")
             
     def copy(self, parent):
 
