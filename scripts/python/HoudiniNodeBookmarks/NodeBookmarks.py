@@ -337,7 +337,7 @@ class Separator(QtWidgets.QWidget):
 
         rem_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\remove")
         self.remove_act = QtWidgets.QAction(rem_ico,
-                                            "Remove Bookmark", self)
+                                            "Remove Separator", self)
         self.remove_act.triggered.connect(self.remove_me)
         self.menu.addAction(self.remove_act)
 
