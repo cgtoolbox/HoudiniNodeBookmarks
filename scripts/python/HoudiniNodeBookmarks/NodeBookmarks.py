@@ -317,19 +317,19 @@ class Separator(QtWidgets.QWidget):
 
         edit_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\edit")
         self.edit_label_act = QtWidgets.QAction(edit_ico,
-                                                "Edit Label", self)
+                                                "   Edit Label", self)
         self.edit_label_act.triggered.connect(self.edit_label)
         self.menu.addAction(self.edit_label_act)
 
         color_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\color")
         self.edit_color_act = QtWidgets.QAction(color_ico,
-                                                "Edit Children Background Color", self)
+                                                "   Edit Children Background Color", self)
         self.edit_color_act.triggered.connect(self.pick_color)
         self.menu.addAction(self.edit_color_act)
 
         color_txt_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\text_color")
         self.edit_txt_color_act = QtWidgets.QAction(color_txt_ico,
-                                                "Edit Children Label Color", self)
+                                                "   Edit Children Label Color", self)
         self.edit_txt_color_act.triggered.connect(self.pick_txt_color)
         self.menu.addAction(self.edit_txt_color_act)
 
@@ -337,7 +337,7 @@ class Separator(QtWidgets.QWidget):
 
         rem_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\remove")
         self.remove_act = QtWidgets.QAction(rem_ico,
-                                            "Remove Separator", self)
+                                            "   Remove Separator", self)
         self.remove_act.triggered.connect(self.remove_me)
         self.menu.addAction(self.remove_act)
 
@@ -974,25 +974,25 @@ class Bookmark(QtWidgets.QFrame):
 
         edit_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\edit")
         self.edit_label_act = QtWidgets.QAction(edit_ico,
-                                                "Edit Label", self)
+                                                "   Edit Label", self)
         self.edit_label_act.triggered.connect(self.edit_name)
         self.menu.addAction(self.edit_label_act)
 
         color_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\color")
         self.edit_color_act = QtWidgets.QAction(color_ico,
-                                                "Edit Background Color", self)
+                                                "   Edit Background Color", self)
         self.edit_color_act.triggered.connect(self.pick_color)
         self.menu.addAction(self.edit_color_act)
 
         color_txt_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\text_color")
         self.edit_txt_color_act = QtWidgets.QAction(color_txt_ico,
-                                                "Edit Label Color", self)
+                                                "   Edit Label Color", self)
         self.edit_txt_color_act.triggered.connect(self.pick_txt_color)
         self.menu.addAction(self.edit_txt_color_act)
 
         default_bg_col_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\palette")
         self.setcol_as_default = QtWidgets.QAction(default_bg_col_ico,
-                                                "Set Current BG color as default",
+                                                "   Set Current BG color as default",
                                                 self)
 
         self.setcol_as_default.triggered.connect(self.set_default_col)
@@ -1002,7 +1002,7 @@ class Bookmark(QtWidgets.QFrame):
 
         rem_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\remove")
         self.remove_act = QtWidgets.QAction(rem_ico,
-                                            "Remove Bookmark", self)
+                                            "   Remove Bookmark", self)
         self.remove_act.triggered.connect(self.remove_me)
         self.menu.addAction(self.remove_act)
 
@@ -1032,11 +1032,14 @@ class Bookmark(QtWidgets.QFrame):
 
     def clean_node_callbacks(self):
 
-        for c_types, c_m in self.node.eventCallbacks():
+        try:
+            for c_types, c_m in self.node.eventCallbacks():
             
-            if "Bookmark.node_callback" in str(c_m):
-                self.node.removeEventCallback(self.callback_types,
-                                              c_m)
+                if "Bookmark.node_callback" in str(c_m):
+                    self.node.removeEventCallback(self.callback_types,
+                                                  c_m)
+        except hou.ObjectWasDeleted:
+            pass
 
     def node_callback(self, **kwargs):
 
@@ -1063,12 +1066,15 @@ class Bookmark(QtWidgets.QFrame):
 
         elif kwargs["event_type"] == hou.nodeEventType.BeingDeleted:
 
-            if ConfigFile.get_ui_prefs("auto_delete_bookmark"):
-                self.remove_me(True)
-            else:
-                self.set_disabled()
-                self.setToolTip(("Bookmark not available, "
-                                 "node '{}' was deleted.".format(self.node_path)))
+            try:
+                if ConfigFile.get_ui_prefs("auto_delete_bookmark"):
+                    self.remove_me(True)
+                else:
+                    self.set_disabled()
+                    self.setToolTip(("Bookmark not available, "
+                                     "node '{}' was deleted.".format(self.node_path)))
+            except:
+                pass
 
     def set_disabled(self):
 
@@ -1118,6 +1124,8 @@ class Bookmark(QtWidgets.QFrame):
 
         if refresh_ids:
             self.bookmarkview.refresh_bookmark_ids()
+
+        self.clean_node_callbacks()
 
     def edit_name(self):
 
@@ -1444,28 +1452,28 @@ class NodesBookmark(QtWidgets.QMainWindow):
 
         sav_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\save")
         save_act = QtWidgets.QAction(sav_ico,
-                                     "Save to file",
+                                     "   Save to file",
                                      self)
         save_act.triggered.connect(self.save_bookmarks)
         main_menu.addAction(save_act)
 
         open_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\open")
         open_act = QtWidgets.QAction(open_ico,
-                                     "Open from file",
+                                     "   Open from file",
                                      self)
         open_act.triggered.connect(self.open_bookmarks)
         main_menu.addAction(open_act)
         
         # recent menu
         self.recent_files = []
-        self.recents_menu = QtWidgets.QMenu("Open Recent", self)
+        self.recents_menu = QtWidgets.QMenu("   Open Recent", self)
         main_menu.addMenu(self.recents_menu)
 
         main_menu.addSeparator()
 
         sav_hip_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\to_hip")
         save_to_hip_act = QtWidgets.QAction(sav_hip_ico,
-                                     "Save to hip file",
+                                     "   Save to hip file",
                                      self)
 
         save_to_hip_act.triggered.connect(self.save_to_hip)
@@ -1473,14 +1481,14 @@ class NodesBookmark(QtWidgets.QMainWindow):
 
         open_hip_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\from_hip")
         open_from_hip_act = QtWidgets.QAction(open_hip_ico,
-                                     "Open from hip file",
+                                     "   Open from hip file",
                                      self)
         open_from_hip_act.triggered.connect(lambda: self.check_hip_file_data(verbose=True))
         main_menu.addAction(open_from_hip_act)
 
         delete_hip_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\clear_hip")
         delete_hip_data_act = QtWidgets.QAction(delete_hip_ico,
-                                     "Delete hip file data",
+                                     "   Delete hip file data",
                                      self)
         delete_hip_data_act.triggered.connect(self.delete_hip_file_data)
         main_menu.addAction(delete_hip_data_act)
@@ -1490,7 +1498,7 @@ class NodesBookmark(QtWidgets.QMainWindow):
         # clear
         clear_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\close")
         clear_act = QtWidgets.QAction(clear_ico,
-                                     "Clear Bookmarks",
+                                     "   Clear Bookmarks",
                                      self)
         clear_act.triggered.connect(self.clear_bookmarks)
         main_menu.addAction(clear_act)
@@ -1500,14 +1508,14 @@ class NodesBookmark(QtWidgets.QMainWindow):
         # options menu
         options_menu = QtWidgets.QMenu("Options", self)
 
-        self.create_bkm_act = QtWidgets.QAction("Add selected node as bookmark",
+        self.create_bkm_act = QtWidgets.QAction("   Add selected node as bookmark",
                                                      self)
         add_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\add")
         self.create_bkm_act.setIcon(add_ico)
         self.create_bkm_act.triggered.connect(add_bookmark)
         options_menu.addAction(self.create_bkm_act)
 
-        self.rem_bkm_act = QtWidgets.QAction("Remove selected node from bookmarks",
+        self.rem_bkm_act = QtWidgets.QAction("   Remove selected node from bookmarks",
                                                   self)
         rem_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\close")
         self.rem_bkm_act.setIcon(rem_ico)
@@ -1516,28 +1524,28 @@ class NodesBookmark(QtWidgets.QMainWindow):
 
         options_menu.addSeparator()
 
-        self.ask_name_act = QtWidgets.QAction("Ask for name on creation", self)
+        self.ask_name_act = QtWidgets.QAction("   Ask for name on creation", self)
         self.ask_name_act.setCheckable(True)
         self.ask_name_act.setChecked(ConfigFile.get_ui_prefs("ask_for_name"))
         self.ask_name_act.triggered.connect(lambda: self.update_opts("ask_for_name"))
 
         options_menu.addAction(self.ask_name_act)
 
-        self.display_options_act = QtWidgets.QAction("Display options", self)
+        self.display_options_act = QtWidgets.QAction("   Display options", self)
         self.display_options_act.setCheckable(True)
         self.display_options_act.setChecked(ConfigFile.get_ui_prefs("display_options"))
         self.display_options_act.triggered.connect(lambda: self.update_opts("display_options"))
 
         options_menu.addAction(self.display_options_act)
 
-        self.display_filter_act = QtWidgets.QAction("Display filter", self)
+        self.display_filter_act = QtWidgets.QAction("   Display filter", self)
         self.display_filter_act.setCheckable(True)
         self.display_filter_act.setChecked(ConfigFile.get_ui_prefs("display_filter"))
         self.display_filter_act.triggered.connect(lambda: self.update_opts("display_filter"))
 
         options_menu.addAction(self.display_filter_act)
 
-        self.auto_del_bkm_act = QtWidgets.QAction("Auto delete bookmarks", self)
+        self.auto_del_bkm_act = QtWidgets.QAction("   Auto delete bookmarks", self)
         self.auto_del_bkm_act.setCheckable(True)
         self.auto_del_bkm_act.setChecked(ConfigFile.get_ui_prefs("auto_delete_bookmark"))
         self.auto_del_bkm_act.triggered.connect(lambda: self.update_opts("auto_delete_bookmark"))
@@ -1546,7 +1554,7 @@ class NodesBookmark(QtWidgets.QMainWindow):
 
         options_menu.addSeparator()
 
-        self.auto_save_act = QtWidgets.QAction("Auto save bookmarks to hip", self)
+        self.auto_save_act = QtWidgets.QAction("   Auto save bookmarks to hip", self)
         self.auto_save_act.setCheckable(True)
         self.auto_save_act.setChecked(ConfigFile.get_ui_prefs("auto_save_to_hip"))
         self.auto_save_act.triggered.connect(lambda: self.update_opts("auto_save_to_hip"))
@@ -1560,14 +1568,14 @@ class NodesBookmark(QtWidgets.QMainWindow):
 
         help_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\help")
         help_act = QtWidgets.QAction(help_ico,
-                                     "Show Online Help",
+                                     "   Show Online Help",
                                      self)
         help_act.triggered.connect(self.show_help)
         help_menu.addAction(help_act)
 
         about_ico = hou.ui.createQtIcon(r"HoudiniNodeBookmarks\about")
         about_act = QtWidgets.QAction(about_ico,
-                                      "About",
+                                      "   About",
                                       self)
         about_act.triggered.connect(self.show_about)
         help_menu.addAction(about_act)
@@ -1844,10 +1852,17 @@ class NodesBookmark(QtWidgets.QMainWindow):
         if self.bookmark_view.bookmarks == {}:
             return
 
-        r = hou.ui.displayMessage("Clear all bookmarks ?",
-                                  buttons=["Ok", "Cancel"],
+        r = hou.ui.displayMessage("Clear all bookmarks and hip file data ?",
+                                  buttons=["Delete All Data",
+                                           "Delete and Keep Hip Data",
+                                           "Cancel"],
                                   severity=hou.severityType.Warning)
-        if r == 1: return
+        if r == 2: return
+
+        if r == 1:
+            keep_hip = True
+        else:
+            keep_hip = False
 
         for i in range(self.bookmark_view.bookmark_view_layout.count())[::-1]:
             it = self.bookmark_view.bookmark_view_layout.itemAt(i)
@@ -1855,15 +1870,16 @@ class NodesBookmark(QtWidgets.QMainWindow):
                 w = it.widget()
                 if w:
                     w.setParent(None)
+                    if hasattr(w, "clean_node_callbacks"):
+                        w.clean_node_callbacks()
                     w.deleteLater()
 
         self.bookmark_view.bookmarks = {}
         
         self.bookmark_view.bookmark_view_layout.update()
         self.bookmark_view.update()
-
-        auto_save = ConfigFile.get_ui_prefs("auto_save_to_hip")
-        if auto_save:
+        
+        if not keep_hip:
             self.delete_hip_file_data(verbose=False)
 
     def open_bookmarks(self, bkm_file=""):
