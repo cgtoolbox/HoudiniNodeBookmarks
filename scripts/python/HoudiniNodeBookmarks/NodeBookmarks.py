@@ -364,7 +364,7 @@ class Separator(QtWidgets.QWidget):
                 if not w: continue
 
                 if start:
-                    if  isinstance(w, Separator):
+                    if hasattr(w, "collapsed_children"):
                         return widgets
                     widgets.append(w)
             
@@ -403,7 +403,7 @@ class Separator(QtWidgets.QWidget):
             return
 
         nitems = len([w for w in self.find_widgets_to_collapse() if \
-                      isinstance(w, Bookmark)])
+                      hasattr(w, "node")])
         self.collapsed_label.setText("(" + str(nitems) + ")")
         self.collapse_btn.setIcon(hou.ui.createQtIcon(r"HoudiniNodeBookmarks\right"))
         self.collapsed_label.show()
@@ -423,7 +423,7 @@ class Separator(QtWidgets.QWidget):
         it = self.bookmarkview.bookmark_view_layout.itemAt(self.id + 1)
         if it:
             w = it.widget()
-            if isinstance(w, InterWidget):
+            if hasattr(w, "interwidget"):
                 w.setParent(None)
                 w.deleteLater()
 
@@ -791,6 +791,7 @@ class InterWidget(QtWidgets.QFrame):
         self.bookmarkview = parent
         self.setFixedHeight(4)
         self.setAcceptDrops(True)
+        self.interwidget = True
         
         self.setStyleSheet("background-color: transparent")
 
@@ -827,7 +828,7 @@ class InterWidget(QtWidgets.QFrame):
             s_idx = self.bookmarkview.bookmark_view_layout.indexOf(self)
             self.bookmarkview.insert_separator(s_idx)
 
-        elif isinstance(src_w, Bookmark) or isinstance(src_w, Separator):
+        elif hasattr(src_w, "node") or hasattr(src_w, "collapsed_children"):
             
             src_id = self.bookmarkview.bookmark_view_layout.indexOf(src_w)
             s_idx = self.bookmarkview.bookmark_view_layout.indexOf(self)
@@ -836,7 +837,7 @@ class InterWidget(QtWidgets.QFrame):
             prev_it = self.bookmarkview.bookmark_view_layout.itemAt(s_idx - 1)
             if prev_it:
                 prev_w = prev_it.widget()
-                if isinstance(prev_w, Bookmark) or isinstance(prev_w, Separator):
+                if hasattr(src_w, "node") or hasattr(src_w, "collapsed_children"):
                     if prev_w.id == src_id:
                         return
 
@@ -848,7 +849,7 @@ class InterWidget(QtWidgets.QFrame):
             
             s_idx = self.bookmarkview.bookmark_view_layout.indexOf(self)
 
-            if isinstance(src_w, Separator) and src_w.collapsed_children:
+            if hasattr(src_w, "collapsed_children") and src_w.collapsed_children:
                 self.bookmarkview.bookmark_view_layout.insertWidget(s_idx + 1, src_w)
             else:
                 self.bookmarkview.bookmark_view_layout.insertWidget(s_idx, src_w)
@@ -856,7 +857,7 @@ class InterWidget(QtWidgets.QFrame):
             idx = self.bookmarkview.bookmark_view_layout.indexOf(src_w)
             self.bookmarkview.bookmark_view_layout.insertWidget(idx, inter_w)
 
-            if isinstance(src_w, Separator):
+            if hasattr(src_w, "collapsed_children"):
                 
                 widget_col = src_w.collapsed_children
                 
@@ -1113,7 +1114,7 @@ class Bookmark(QtWidgets.QFrame):
         it = self.bookmarkview.bookmark_view_layout.itemAt(self.id + 1)
         if it:
             w = it.widget()
-            if isinstance(w, InterWidget):
+            if hasattr(w, "interwidget"):
                 w.setParent(None)
                 w.deleteLater()
 
