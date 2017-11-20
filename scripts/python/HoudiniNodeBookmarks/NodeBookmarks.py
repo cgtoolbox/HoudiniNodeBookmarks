@@ -10,6 +10,7 @@ from PySide2 import QtWidgets
 from PySide2 import QtGui
 from PySide2 import QtCore
 Qt = QtCore.Qt
+import hdefereval
 
 import HoudiniNodeBookmarks
 
@@ -107,6 +108,78 @@ def init_bookmark_view():
 
     w = NodesBookmark()
     return w
+
+def safe_apply_callback(node, callback_types, callback):
+    """ Apply a callback on a node but check before if
+        any callback of the same type has been added already.
+    """
+
+    callback_name = callback.func_name
+    callbacks = node.eventCallbacks()
+    if callbacks:
+        for ctype, cfunc in callbacks:
+            if cfunc.func_name == callback_name:
+                return
+
+    node.addEventCallback(callback_types, callback)
+
+def refresh_bookmarks_callbacks_renamed(**kwargs):
+    """ Callback type nodeRenamed applied to all parents to the 
+        node set in a bookmark in order to update its path if
+        one of the parent is renamed.
+    """
+    print "refresh_bookmarks_callbacks_renamed: " + str(kwargs)
+    try:
+        interfaces = get_bookmarks_interfaces()
+        if not interfaces: return
+
+        node = kwargs.get("node")
+        if not node: return
+    
+        for i in interfaces:
+            w = i.activeInterfaceRootWidget()
+            w.refresh_bookmark_paths()
+    except Exception as e:
+        print("Callback error, refresh_bookmarks_callbacks_renamed: " + str(e))
+
+def refresh_bookmark_callbacks_parent_deleted(**kwargs):
+    print "refresh_bookmark_parent_deleted: " + str(kwargs)
+    try:
+        interfaces = get_bookmarks_interfaces()
+        if not interfaces: return
+
+        node = kwargs.get("node")
+        if not node: return
+
+        for i in interfaces:
+            w = i.activeInterfaceRootWidget()
+
+            hdefereval.executeDeferredAfterWaiting(w.refresh_bookmark_paths, 1,
+                                                    parent_path=node.path(),
+                                                    created_child_path=None,
+                                                    parent_being_deleted=True)
+    except Exception as e:
+        print("Callback error, refresh_bookmark_parent_deleted: " + str(e))
+
+def refresh_bookmark_callbacks_childcreated(**kwargs):
+    print "refresh_bookmark_callbacks_childcreated: " + str(kwargs)
+    try:
+        interfaces = get_bookmarks_interfaces()
+        if not interfaces: return
+
+        node = kwargs.get("node")
+        if not node: return
+
+        child_node = kwargs["child_node"]
+
+        for i in interfaces:
+            w = i.activeInterfaceRootWidget()
+
+            hdefereval.executeDeferredAfterWaiting(w.refresh_bookmark_paths, 1,
+                                                   parent_path=node.path(),
+                                                   created_child_path=child_node.path())
+    except Exception as e:
+        print("Callback error, refresh_bookmark_callbacks_childcreated: " + str(e))
 
 class Config():
 
@@ -640,8 +713,11 @@ class BookmarkNodeFlags(QtWidgets.QFrame):
     def __init__(self, **kwargs):
         super(BookmarkNodeFlags, self).__init__(parent=kwargs["parent"])
         
-        self.node = kwargs["node"]
-        self.node_cat = kwargs["node_cat"]
+        self.node_path = kwargs["node_path"]
+        node = hou.node(self.node_path)
+
+        cat = node.type().category()
+        self.node_cat = cat.name()
 
         main_layout = QtWidgets.QHBoxLayout()
         main_layout.setSpacing(2)
@@ -651,8 +727,8 @@ class BookmarkNodeFlags(QtWidgets.QFrame):
         self.display_flag_btn = None
         self.display_template_btn = None
         
-        if hasattr(self.node, "bypass"):
-            self.bypass = self.node.isBypassed()
+        if hasattr(node, "bypass"):
+            self.bypass = node.isBypassed()
             self.display_bypass_btn = QtWidgets.QPushButton("")
             self.display_bypass_btn.setFixedWidth(18)
             self.display_bypass_btn.setFixedHeight(28)
@@ -663,7 +739,7 @@ class BookmarkNodeFlags(QtWidgets.QFrame):
             self.update_bypass_flag(init=True)
             main_layout.addWidget(self.display_bypass_btn)
         
-        if hasattr(self.node, "setTemplateFlag"):
+        if hasattr(node, "setTemplateFlag"):
             self.display_template_btn = QtWidgets.QPushButton("")
             self.display_template_btn.setFixedWidth(18)
             self.display_template_btn.setFixedHeight(28)
@@ -674,7 +750,7 @@ class BookmarkNodeFlags(QtWidgets.QFrame):
             self.update_template_flag(init=True)
             main_layout.addWidget(self.display_template_btn)
 
-        if hasattr(self.node, "setDisplayFlag"):
+        if hasattr(node, "setDisplayFlag"):
             self.display_flag_btn = QtWidgets.QPushButton("")
             self.display_flag_btn.setObjectName("nodeFlag")
             self.display_flag_btn.setFixedWidth(18)
@@ -704,15 +780,16 @@ class BookmarkNodeFlags(QtWidgets.QFrame):
         if self.display_flag_btn is None:
             return
 
-        toggle = self.node.isDisplayFlagSet()
+        node = hou.node(self.node_path)
+        toggle = node.isDisplayFlagSet()
 
         if not init:
             
             if update_node:
-                self.node.setDisplayFlag(not toggle)
-                if hasattr(self.node, "setRenderFlag"):
-                    self.node.setRenderFlag(not toggle)
-                toggle = self.node.isDisplayFlagSet()
+                node.setDisplayFlag(not toggle)
+                if hasattr(node, "setRenderFlag"):
+                    node.setRenderFlag(not toggle)
+                toggle = node.isDisplayFlagSet()
         
         if toggle:
             col = "#0489bc"
@@ -733,13 +810,14 @@ class BookmarkNodeFlags(QtWidgets.QFrame):
         if self.display_template_btn is None:
             return
 
-        toggle = self.node.isTemplateFlagSet()
+        node = hou.node(self.node_path)
+        toggle = node.isTemplateFlagSet()
 
         if not init:
             
             if update_node:
-                self.node.setTemplateFlag(not toggle)
-                toggle = self.node.isTemplateFlagSet()
+                node.setTemplateFlag(not toggle)
+                toggle = node.isTemplateFlagSet()
         
         if toggle:
             col = "#dd7dd7"
@@ -760,13 +838,14 @@ class BookmarkNodeFlags(QtWidgets.QFrame):
         if self.display_bypass_btn is None:
             return
 
-        toggle = self.node.isBypassed()
+        node = hou.node(self.node_path)
+        toggle = node.isBypassed()
 
         if not init:
             
             if update_node:
-                self.node.bypass(not toggle)
-                toggle = self.node.isBypassed()
+                node.bypass(not toggle)
+                toggle = node.isBypassed()
         
         if toggle:
             col = "#b6a642"
@@ -781,6 +860,12 @@ class BookmarkNodeFlags(QtWidgets.QFrame):
                                     border: 1px solid black}}""".format(col, col_hov)
 
         self.display_bypass_btn.setStyleSheet(sty)
+
+    def re_init_flags(self):
+
+        self.update_bypass_flag(init=True, update_node=False)
+        self.update_display_flag(init=True, update_node=False)
+        self.update_template_flag(init=True, update_node=False)
 
 class InterWidget(QtWidgets.QFrame):
 
@@ -900,7 +985,14 @@ class Bookmark(QtWidgets.QFrame):
 
         self.collapsed = False
 
-        self.node = kwargs["node"]
+        # try to find node by session ID first
+        if kwargs.get("session_id"):
+            n = hou.nodeBySessionId(kwargs["session_id"])
+        else:
+            n = kwargs["node"]
+
+        self.node = n
+        self.node_session_id = self.node.sessionId()
         self.node_path = self.node.path()
         self.node_name = self.node.name()
         self.node_type = self.node.type()
@@ -1012,8 +1104,7 @@ class Bookmark(QtWidgets.QFrame):
 
         # add flags
         self.bookmark_layout.addStretch(1)
-        self.node_flags = BookmarkNodeFlags(node=self.node,
-                                            node_cat=self.node_cat,
+        self.node_flags = BookmarkNodeFlags(node_path=self.node_path,
                                             parent=self)
         self.node_flags.setVisible(ConfigFile.get_display_pref("show_flags"))
         self.bookmark_layout.addWidget(self.node_flags)
@@ -1030,6 +1121,7 @@ class Bookmark(QtWidgets.QFrame):
         self.clean_node_callbacks()
         self.node.addEventCallback(self.callback_types,
                                    self.node_callback)
+        self.apply_parent_callbacks()
 
     def clean_node_callbacks(self):
 
@@ -1041,6 +1133,22 @@ class Bookmark(QtWidgets.QFrame):
                                                   c_m)
         except hou.ObjectWasDeleted:
             pass
+
+    def apply_parent_callbacks(self):
+
+        n = self.node
+        while n.parent() is not None and n.parent().path() != '/':
+            p = n.parent()
+
+            safe_apply_callback(p, (hou.nodeEventType.NameChanged,),
+                                refresh_bookmarks_callbacks_renamed)
+
+            safe_apply_callback(p, (hou.nodeEventType.ChildCreated,),
+                                refresh_bookmark_callbacks_childcreated)
+
+            safe_apply_callback(p, (hou.nodeEventType.BeingDeleted,),
+                                refresh_bookmark_callbacks_parent_deleted)
+            n = p
 
     def node_callback(self, **kwargs):
 
@@ -1067,13 +1175,15 @@ class Bookmark(QtWidgets.QFrame):
 
         elif kwargs["event_type"] == hou.nodeEventType.BeingDeleted:
 
+            # try to see if the node has been moved and not deleted
+            n = self.refresh_node_data(self.node_session_id)
+            if n: return
+
             try:
                 if ConfigFile.get_ui_prefs("auto_delete_bookmark"):
                     self.remove_me(True)
                 else:
                     self.set_disabled()
-                    self.setToolTip(("Bookmark not available, "
-                                     "node '{}' was deleted.".format(self.node_path)))
             except:
                 pass
 
@@ -1083,6 +1193,8 @@ class Bookmark(QtWidgets.QFrame):
         self.label.setDisabled(True)
         self.node_flags.set_disabled(True)
         self.setStyleSheet("background-color: rgb(20, 20, 20)")
+        self.setToolTip(("Bookmark not available, "
+                            "node '{}' was deleted.".format(self.node_path)))
             
     def copy(self, parent):
 
@@ -1103,6 +1215,7 @@ class Bookmark(QtWidgets.QFrame):
                 "color":self.color,
                 "text_color":self.text_color,
                 "id":self.id,
+                "session_id":self.node_session_id,
                 "uid":self.uid}
 
     def pop_menu(self):
@@ -1213,16 +1326,45 @@ class Bookmark(QtWidgets.QFrame):
                                          bg_color,
                                          bg_hover_color))
 
+    def refresh_session_id(self, node):
+
+        session_id = node.sessionId()
+        self.refresh_node_data(session_id)
+
+    def refresh_node_data(self, node_session_id,
+                          skip_save_hip=False):
+
+        n = hou.nodeBySessionId(node_session_id)
+        if not n:
+            print("DEBUG: invalid session id: " + str(node_session_id))
+            return None
+        
+        # update node data as node has been found by node UI
+        self.node = n
+        self.node_path = n.path()
+        self.node_name = n.name()
+        self.node_session_id = node_session_id
+        self.setToolTip(self.node_path)
+        auto_save = ConfigFile.get_ui_prefs("auto_save_to_hip")
+        if auto_save and not skip_save_hip:
+            self.bookmarkview.nodeBookmarks.save_to_hip(verbose=False)
+
+        return n
+
     def mouseDoubleClickEvent(self, e):
         
         n = hou.node(self.node_path)
+
         if not n:
-            r = hou.ui.displayMessage(("Node doesn't exist anymore,"
-                                       " delete bookmark ?"),
-                                      buttons=["Ok", "Cancel"])
-            if r == 0:
-                self.remove_me()
-            return
+            n = self.refresh_node_data(self.node_session_id)
+
+            if not n:
+                r = hou.ui.displayMessage(("Node doesn't exist anymore,"
+                                           " delete bookmark ?"),
+                                           buttons=["Ok", "Cancel"])
+                if r == 0:
+                    self.remove_me()
+                return
             
         # select the node and make it current
         n.setCurrent(True, True)
@@ -1757,10 +1899,11 @@ class NodesBookmark(QtWidgets.QMainWindow):
 
         return bookmarks
 
-    def get_bookmark_file_data(self):
+    def get_bookmark_file_data(self, verbose=False):
 
         if self.bookmark_view.bookmarks == {}:
-            hou.ui.displayMessage("Bookmark list is empty.")
+            if verbose:
+                hou.ui.displayMessage("Bookmark list is empty.")
             return None
 
         bookmark_data = {}
@@ -1848,14 +1991,66 @@ class NodesBookmark(QtWidgets.QMainWindow):
         self.link_labels.setText(inf)
         self.link_labels.setToolTip(", ".join([e.name() for e in editors]))
 
+    def refresh_bookmark_paths(self, parent_path=None,
+                               created_child_path=None,
+                               parent_being_deleted=False):
+
+        for i in range(self.bookmark_view.bookmark_view_layout.count()):
+            it = self.bookmark_view.bookmark_view_layout.itemAt(i)
+            if it:
+                w = it.widget()
+                if w:
+                    if hasattr(w, "node_session_id"):
+
+                        if parent_being_deleted:
+
+                            if not hou.node(w.node_path):
+                                if ConfigFile.get_ui_prefs("auto_delete_bookmark"):
+                                    w.remove_me()
+                                else:
+                                    w.set_disabled()
+
+                        elif parent_path is not None and \
+                           created_child_path is not None:
+                            cur_node_path = w.node_path
+                            cur_node_path = cur_node_path.replace(parent_path, "")
+                            cur_node_path = created_child_path + cur_node_path
+                            cur_node = hou.node(cur_node_path)
+
+                            if cur_node:
+
+                                w.node_flags.node_path = cur_node_path
+                                w.node_flags.re_init_flags()
+                                w.refresh_session_id(cur_node)
+                                
+
+                                child = hou.node(created_child_path)
+
+                                safe_apply_callback(child, (hou.nodeEventType.NameChanged,),
+                                                    refresh_bookmarks_callbacks_renamed)
+
+                                safe_apply_callback(child, (hou.nodeEventType.ChildCreated,),
+                                                    refresh_bookmark_callbacks_childcreated)
+
+                                safe_apply_callback(child, (hou.nodeEventType.BeingDeleted,),
+                                                    refresh_bookmark_callbacks_parent_deleted)
+                            
+                        else:
+                            w.refresh_node_data(w.node_session_id,
+                                                skip_save_hip=True)
+
+        auto_save = ConfigFile.get_ui_prefs("auto_save_to_hip")
+        if auto_save:
+            self.save_to_hip(verbose=False)
+
     def clear_bookmarks(self):
 
         if self.bookmark_view.bookmarks == {}:
             return
 
         r = hou.ui.displayMessage("Clear all bookmarks and hip file data ?",
-                                  buttons=["Delete All Data",
-                                           "Delete and Keep Hip Data",
+                                  buttons=["Delete All Bookmarks",
+                                           "Delete All Bookmarks and Keep Hip Data",
                                            "Cancel"],
                                   severity=hou.severityType.Warning)
         if r == 2: return
@@ -1922,7 +2117,7 @@ class NodesBookmark(QtWidgets.QMainWindow):
 
     def save_to_hip(self, verbose=True):
 
-        bookmark_data = self.get_bookmark_file_data()
+        bookmark_data = self.get_bookmark_file_data(verbose=verbose)
         if not bookmark_data: return
 
         if verbose:
@@ -1939,11 +2134,14 @@ class NodesBookmark(QtWidgets.QMainWindow):
                 )
 
         cur_data = hou.sessionModuleSource()
-        hou.setSessionModuleSource(cur_data + '\n' + code)
+        if cur_data == "\n" or cur_data == "":
+            hou.setSessionModuleSource(code)
+        else:
+            hou.setSessionModuleSource(cur_data + '\n' + code)
 
     def check_hip_file_data(self, verbose=False):
 
-        if "# HOUDINI NODE BOOKMARKS START\n" in hou.sessionModuleSource():
+        if hasattr(hou.session, "get_node_bookmarks_data"):
             data = hou.session.get_node_bookmarks_data()
             self.load_from_hip_data(data)
         else:
@@ -2027,6 +2225,7 @@ class NodesBookmark(QtWidgets.QMainWindow):
                              node=node,
                              color=bkm.get("color", [0,0,0]),
                              text_color=bkm.get("text_color", [0,0,0]),
+                             session_id=bkm.get("session_id"),
                              id=bkm.get("id", -1),
                              uid=bkm.get("uid", "INVALID"),
                              parent=self.bookmark_view)
