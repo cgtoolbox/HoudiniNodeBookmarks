@@ -128,7 +128,7 @@ def refresh_bookmarks_callbacks_renamed(**kwargs):
         node set in a bookmark in order to update its path if
         one of the parent is renamed.
     """
-    print "refresh_bookmarks_callbacks_renamed: " + str(kwargs)
+    
     try:
         interfaces = get_bookmarks_interfaces()
         if not interfaces: return
@@ -143,7 +143,7 @@ def refresh_bookmarks_callbacks_renamed(**kwargs):
         print("Callback error, refresh_bookmarks_callbacks_renamed: " + str(e))
 
 def refresh_bookmark_callbacks_parent_deleted(**kwargs):
-    print "refresh_bookmark_parent_deleted: " + str(kwargs)
+    
     try:
         interfaces = get_bookmarks_interfaces()
         if not interfaces: return
@@ -162,7 +162,7 @@ def refresh_bookmark_callbacks_parent_deleted(**kwargs):
         print("Callback error, refresh_bookmark_parent_deleted: " + str(e))
 
 def refresh_bookmark_callbacks_childcreated(**kwargs):
-    print "refresh_bookmark_callbacks_childcreated: " + str(kwargs)
+    
     try:
         interfaces = get_bookmarks_interfaces()
         if not interfaces: return
@@ -1336,7 +1336,6 @@ class Bookmark(QtWidgets.QFrame):
 
         n = hou.nodeBySessionId(node_session_id)
         if not n:
-            print("DEBUG: invalid session id: " + str(node_session_id))
             return None
         
         # update node data as node has been found by node UI
@@ -2012,10 +2011,35 @@ class NodesBookmark(QtWidgets.QMainWindow):
 
                         elif parent_path is not None and \
                            created_child_path is not None:
+
                             cur_node_path = w.node_path
                             cur_node_path = cur_node_path.replace(parent_path, "")
+
+                            data = cur_node_path.split('/')
+                            if len(data) > 2:
+                                created_child = data[1]
+                            else:
+                                try:
+                                    created_child = data[0]
+                                except IndexError:
+                                    created_child = ""
+
+                            created_child = created_child_path + '/' + created_child
                             cur_node_path = created_child_path + cur_node_path
                             cur_node = hou.node(cur_node_path)
+
+                            created_child_node = hou.node(created_child)
+
+                            if created_child_node:
+
+                                safe_apply_callback(created_child_node, (hou.nodeEventType.NameChanged,),
+                                                    refresh_bookmarks_callbacks_renamed)
+
+                                safe_apply_callback(created_child_node, (hou.nodeEventType.ChildCreated,),
+                                                    refresh_bookmark_callbacks_childcreated)
+
+                                safe_apply_callback(created_child_node, (hou.nodeEventType.BeingDeleted,),
+                                                    refresh_bookmark_callbacks_parent_deleted)
 
                             if cur_node:
 
@@ -2023,7 +2047,6 @@ class NodesBookmark(QtWidgets.QMainWindow):
                                 w.node_flags.re_init_flags()
                                 w.refresh_session_id(cur_node)
                                 
-
                                 child = hou.node(created_child_path)
 
                                 safe_apply_callback(child, (hou.nodeEventType.NameChanged,),
