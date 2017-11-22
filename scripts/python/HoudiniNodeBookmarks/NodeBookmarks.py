@@ -781,7 +781,10 @@ class BookmarkNodeFlags(QtWidgets.QFrame):
             return
 
         node = hou.node(self.node_path)
-        toggle = node.isDisplayFlagSet()
+        if hasattr(node, "isDisplayFlagSet"):
+            toggle = node.isDisplayFlagSet()
+        else:
+            return
 
         if not init:
             
@@ -2016,7 +2019,7 @@ class NodesBookmark(QtWidgets.QMainWindow):
                             cur_node_path = cur_node_path.replace(parent_path, "")
 
                             data = cur_node_path.split('/')
-                            if len(data) > 2:
+                            if len(data) >= 2:
                                 created_child = data[1]
                             else:
                                 try:
@@ -2030,7 +2033,7 @@ class NodesBookmark(QtWidgets.QMainWindow):
 
                             created_child_node = hou.node(created_child)
 
-                            if created_child_node:
+                            if created_child_node and (cur_node_path != created_child):
 
                                 safe_apply_callback(created_child_node, (hou.nodeEventType.NameChanged,),
                                                     refresh_bookmarks_callbacks_renamed)
@@ -2043,9 +2046,9 @@ class NodesBookmark(QtWidgets.QMainWindow):
 
                             if cur_node:
 
+                                w.refresh_session_id(cur_node)
                                 w.node_flags.node_path = cur_node_path
                                 w.node_flags.re_init_flags()
-                                w.refresh_session_id(cur_node)
                                 
                                 child = hou.node(created_child_path)
 
@@ -2072,13 +2075,13 @@ class NodesBookmark(QtWidgets.QMainWindow):
             return
 
         r = hou.ui.displayMessage("Clear all bookmarks and hip file data ?",
-                                  buttons=["Delete All Bookmarks",
-                                           "Delete All Bookmarks and Keep Hip Data",
+                                  buttons=["Delete All Bookmarks and Keep Hip Data",
+                                           "Delete All Bookmarks Data",
                                            "Cancel"],
                                   severity=hou.severityType.Warning)
         if r == 2: return
 
-        if r == 1:
+        if r == 0:
             keep_hip = True
         else:
             keep_hip = False
@@ -2211,7 +2214,13 @@ class NodesBookmark(QtWidgets.QMainWindow):
             if not is_bkm_code:
                 new_data.append(d)
 
-        hou.setSessionModuleSource('\n'.join(new_data))
+        if new_data:
+            hou.setSessionModuleSource('\n'.join(new_data))
+        else:
+            hou.setSessionModuleSource('')
+
+        if hasattr(hou.session, "get_node_bookmarks_data"):
+            del(hou.session.get_node_bookmarks_data)
 
     def set_bookmark_from_data(self, data):
 
