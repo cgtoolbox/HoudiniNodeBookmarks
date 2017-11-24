@@ -1167,22 +1167,29 @@ class Bookmark(QtWidgets.QFrame):
                                 refresh_bookmark_callbacks_parent_deleted)
             n = p
 
+    def rename_bookmark(self, node):
+
+        if node is None:
+            return
+
+        rename_bookmark = self.bookmark_name == self.node_name
+
+        self.node = node
+        self.node_path = self.node.path()
+        self.node_name = self.node.name()
+        self.setToolTip(self.node_path)
+
+        if rename_bookmark:
+            self.bookmark_name = self.node_name
+            self.label.setText(self.node_name)
+
     def node_callback(self, **kwargs):
 
         if kwargs["event_type"] == hou.nodeEventType.NameChanged:
 
             # if the bookmark's name is the node's name then 
             # rename bookmark as well
-            rename_bookmark = self.bookmark_name == self.node_name
-
-            self.node = kwargs["node"]
-            self.node_path = self.node.path()
-            self.node_name = self.node.name()
-            self.setToolTip(self.node_path)
-
-            if rename_bookmark:
-                self.bookmark_name = self.node_name
-                self.label.setText(self.node_name)
+            self.rename_bookmark(kwargs["node"])
 
         elif kwargs["event_type"] == hou.nodeEventType.FlagChanged:
             
@@ -1356,6 +1363,7 @@ class Bookmark(QtWidgets.QFrame):
             return None
         
         # update node data as node has been found by node UI
+        self.rename_bookmark(n)
         self.node = n
         self.node_path = n.path()
         self.node_name = n.name()
@@ -1395,7 +1403,7 @@ class Bookmark(QtWidgets.QFrame):
             ntw.frameSelection()
             ntw.homeToSelection()
             ntw.flashMessage(self.node_icon,
-                             self.bookmark_name,
+                             n.name(),
                              1)
 
     def mouseMoveEvent(self, e):
@@ -2030,6 +2038,10 @@ class NodesBookmark(QtWidgets.QMainWindow):
                            created_child_path is not None:
 
                             cur_node_path = w.node_path
+
+                            if not cur_node_path.startswith(parent_path):
+                                continue
+
                             cur_node_path = cur_node_path.replace(parent_path, "")
 
                             data = cur_node_path.split('/')
