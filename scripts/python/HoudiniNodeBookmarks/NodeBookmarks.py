@@ -781,6 +781,8 @@ class BookmarkNodeFlags(QtWidgets.QFrame):
             return
 
         node = hou.node(self.node_path)
+        if not node:
+            return
         if hasattr(node, "isDisplayFlagSet"):
             toggle = node.isDisplayFlagSet()
         else:
@@ -814,7 +816,13 @@ class BookmarkNodeFlags(QtWidgets.QFrame):
             return
 
         node = hou.node(self.node_path)
-        toggle = node.isTemplateFlagSet()
+        if not node:
+            return
+
+        if hasattr(node, "isTemplateFlagSet"):
+            toggle = node.isTemplateFlagSet()
+        else:
+            return
 
         if not init:
             
@@ -842,7 +850,13 @@ class BookmarkNodeFlags(QtWidgets.QFrame):
             return
 
         node = hou.node(self.node_path)
-        toggle = node.isBypassed()
+        if not node:
+            return
+        
+        if hasattr(node, "isBypassed"):
+            toggle = node.isBypassed()
+        else:
+            return
 
         if not init:
             
@@ -2074,17 +2088,31 @@ class NodesBookmark(QtWidgets.QMainWindow):
         if self.bookmark_view.bookmarks == {}:
             return
 
-        r = hou.ui.displayMessage("Clear all bookmarks and hip file data ?",
-                                  buttons=["Delete All Bookmarks and Keep Hip Data",
-                                           "Delete All Bookmarks Data",
-                                           "Cancel"],
-                                  severity=hou.severityType.Warning)
-        if r == 2: return
+        data = self.check_hip_file_data(load_data=False)
+        has_data = data is not None and data != {}
+        if has_data:
+            r = hou.ui.displayMessage("Clear all bookmarks and hip file data ?",
+                                      buttons=["Delete All Bookmarks and Keep Hip Data",
+                                               "Delete All Bookmarks Data",
+                                               "Cancel"],
+                                      severity=hou.severityType.Warning)
+            if r == 2: return
 
-        if r == 0:
-            keep_hip = True
         else:
+            r = hou.ui.displayMessage("Clear all bookmarks ?",
+                                      buttons=["Delete All Bookmarks Data",
+                                               "Cancel"],
+                                      severity=hou.severityType.Warning)
+            if r == 1: return
+
+        
+        if not has_data:
             keep_hip = False
+        else:
+            if r == 0:
+                keep_hip = True
+            else:
+                keep_hip = False
 
         for i in range(self.bookmark_view.bookmark_view_layout.count())[::-1]:
             it = self.bookmark_view.bookmark_view_layout.itemAt(i)
@@ -2165,14 +2193,17 @@ class NodesBookmark(QtWidgets.QMainWindow):
         else:
             hou.setSessionModuleSource(cur_data + '\n' + code)
 
-    def check_hip_file_data(self, verbose=False):
+    def check_hip_file_data(self, verbose=False, load_data=True):
 
         if hasattr(hou.session, "get_node_bookmarks_data"):
             data = hou.session.get_node_bookmarks_data()
-            self.load_from_hip_data(data)
+            if load_data:
+                self.load_from_hip_data(data)
+            return data
         else:
             if verbose:
                 hou.ui.displayMessage("No bookmarks data found in current hip file")
+            return None
 
     def load_from_hip_data(self, data):
 
