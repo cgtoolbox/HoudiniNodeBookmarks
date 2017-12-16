@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{f591b7d2-6125-4c29-b7e5-a0895370fb11}</ProjectGuid>
+    <ProjectHome />
+    <StartupFile />
+    <SearchPath />
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterId />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="config\Icons\HoudiniNodeBookmarks\about.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\add.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\book.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\break.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\checkmark.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\clear_hip.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\close.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\color.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\down.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\edit.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\flags.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\from_hip.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\grp_ico.png" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\help.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\ico.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\in.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\label.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\open.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\palette.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\refresh.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\remove.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\right.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\save.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\sep.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\text_color.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\to_hip.svg" />
+    <Content Include="config\Icons\HoudiniNodeBookmarks\type.svg" />
+    <Content Include="scripts\python\HoudiniNodeBookmarks\config.ini" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="scripts\python\HoudiniNodeBookmarks\NodeBookmarks.py" />
+    <Compile Include="scripts\python\HoudiniNodeBookmarks\__init__.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="config\" />
+    <Folder Include="config\Icons\" />
+    <Folder Include="config\Icons\HoudiniNodeBookmarks" />
+    <Folder Include="scripts\" />
+    <Folder Include="scripts\python\" />
+    <Folder Include="scripts\python\HoudiniNodeBookmarks" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+</Project>
