@@ -46,7 +46,9 @@
     <Content Include="config\Icons\HoudiniNodeBookmarks\text_color.svg" />
     <Content Include="config\Icons\HoudiniNodeBookmarks\to_hip.svg" />
     <Content Include="config\Icons\HoudiniNodeBookmarks\type.svg" />
+    <Content Include="python_panels\HoudiniNodeBookmarks.pypanel" />
     <Content Include="scripts\python\HoudiniNodeBookmarks\config.ini" />
+    <Content Include="toolbar\NodeBookmarks.shelf" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="scripts\python\HoudiniNodeBookmarks\NodeBookmarks.py" />
@@ -56,6 +58,8 @@
     <Folder Include="config\" />
     <Folder Include="config\Icons\" />
     <Folder Include="config\Icons\HoudiniNodeBookmarks" />
+    <Folder Include="D:\__dev__\HoudiniPythonTools\HoudiniNodeBookmarks\python_panels\" />
+    <Folder Include="D:\__dev__\HoudiniPythonTools\HoudiniNodeBookmarks\toolbar\" />
     <Folder Include="scripts\" />
     <Folder Include="scripts\python\" />
     <Folder Include="scripts\python\HoudiniNodeBookmarks" />
