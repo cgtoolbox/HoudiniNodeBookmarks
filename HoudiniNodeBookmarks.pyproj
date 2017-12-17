@@ -19,6 +19,7 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="build_infos.txt" />
     <Content Include="config\Icons\HoudiniNodeBookmarks\about.svg" />
     <Content Include="config\Icons\HoudiniNodeBookmarks\add.svg" />
     <Content Include="config\Icons\HoudiniNodeBookmarks\book.svg" />
