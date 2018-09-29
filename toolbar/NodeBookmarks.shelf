@@ -11,7 +11,7 @@
     <memberTool name="open_bkm_view"/>
   </toolshelf>
 
-  <tool name="add_bkm" label="Add Bkm" icon="houdiniNodeBookmarks\add">
+  <tool name="add_bkm" label="Add Bkm" icon="HoudiniNodeBookmarks/add">
     <helpText><![CDATA[Add selected node to bookmark view.]]></helpText>
     <toolMenuContext name="network">
       <contextNetType>OBJ</contextNetType>
@@ -35,7 +35,7 @@ except ImportError:
                           severity=hou.severityType.Fatal)]]></script>
   </tool>
 
-  <tool name="rem_bkm" label="Rem Bkm" icon="houdiniNodeBookmarks\close">
+  <tool name="rem_bkm" label="Rem Bkm" icon="HoudiniNodeBookmarks/close">
     <toolMenuContext name="viewer">
       <contextNetType>OBJ</contextNetType>
       <contextNetType>SOP</contextNetType>
@@ -66,7 +66,7 @@ except ImportError:
                           severity=hou.severityType.Fatal)]]></script>
   </tool>
 
-  <tool name="open_bkm_view" label="Bkm View" icon="houdiniNodeBookmarks\book">
+  <tool name="open_bkm_view" label="Bkm View" icon="HoudiniNodeBookmarks/book">
     <script scriptType="python"><![CDATA[import hou
 
 try:
