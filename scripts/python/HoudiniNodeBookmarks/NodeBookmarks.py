@@ -4,13 +4,17 @@ import os
 import time
 import json
 import tempfile
-import ConfigParser
 import webbrowser
 from PySide2 import QtWidgets
 from PySide2 import QtGui
 from PySide2 import QtCore
 Qt = QtCore.Qt
 import hdefereval
+
+try:
+    import ConfigParser as configparser
+except ImportError:
+    import configparser
 
 import HoudiniNodeBookmarks
 
@@ -118,12 +122,17 @@ def safe_apply_callback(node, callback_types, callback):
         any callback of the same type has been added already.
     """
 
-    callback_name = callback.func_name
+    try:
+        callback_name = callback.func_name
+    except AttributeError:
+        callback_name = callback.__name__  #py3
     callbacks = node.eventCallbacks()
     if callbacks:
         for ctype, cfunc in callbacks:
-            if cfunc.func_name == callback_name:
-                return
+            try:
+                if cfunc.func_name == callback_name: return
+            except AttributeError:
+                if cfunc.__name__ == callback_name: return  #py3
 
     node.addEventCallback(callback_types, callback)
 
@@ -189,7 +198,7 @@ class Config():
 
     def __init__(self):
 
-        self.config = ConfigParser.ConfigParser()
+        self.config = configparser.ConfigParser()
         self.config.read(CONFIG_FILE)
 
     def __set(self, section, entry, value):
@@ -209,7 +218,7 @@ class Config():
         try:
             return eval(self.config.get("bookmark_colors", node_type))
 
-        except ConfigParser.NoOptionError:
+        except configparser.NoOptionError:
             hou.ui.displayMessage(("Error: color option '{}' "
                                     "not found in config.ini.".format(node_type)),
                                   severity = hou.severityType.Error)
@@ -231,7 +240,7 @@ class Config():
         try:
             return self.config.getboolean("display_prefs", pref)
 
-        except ConfigParser.NoOptionError:
+        except configparser.NoOptionError:
             hou.ui.displayMessage(("Error: display pref '{}'"
                                     " not found in config.ini.".format(pref)),
                                     severity = hou.severityType.Error)
@@ -246,7 +255,7 @@ class Config():
         try:
             return self.config.getboolean("ui_prefs", pref)
 
-        except ConfigParser.NoOptionError:
+        except configparser.NoOptionError:
             hou.ui.displayMessage(("Error: ui pref 'ask_for_name'"
                                     " not found in config.ini."),
                                     severity = hou.severityType.Error)
@@ -1511,7 +1520,7 @@ class BookmarkView(QtWidgets.QWidget):
               
     def insert_bookmark(self, node_path, idx=-1):
 
-        h_node_path = hashlib.sha1(node_path)
+        h_node_path = hashlib.sha1(node_path.encode("utf-8"))
         h_node_path = h_node_path.hexdigest()
 
         if h_node_path in self.bookmarks.keys():
@@ -1583,7 +1592,7 @@ class BookmarkView(QtWidgets.QWidget):
 
     def get_bookmark(self, node_path):
 
-        h_node_path = hashlib.sha1(node_path)
+        h_node_path = hashlib.sha1(node_path.encode("utf-8"))
         h_node_path = h_node_path.hexdigest()
 
         return self.bookmarks.get(h_node_path)

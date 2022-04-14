@@ -28,7 +28,6 @@
 
 try:
     from HoudiniNodeBookmarks import NodeBookmarks
-    reload(NodeBookmarks)
     NodeBookmarks.add_bookmark()
 except ImportError:
     hou.ui.displayMessage("Module HoudiniNodeBookmarks not found.\nTry to reinstall the script.",
@@ -59,7 +58,6 @@ except ImportError:
 
 try:
     from HoudiniNodeBookmarks import NodeBookmarks
-    reload(NodeBookmarks)
     NodeBookmarks.remove_bookmark()
 except ImportError:
     hou.ui.displayMessage("Module HoudiniNodeBookmarks not found.\nTry to reinstall the script.",
@@ -71,7 +69,6 @@ except ImportError:
 
 try:
     from HoudiniNodeBookmarks import NodeBookmarks
-    reload(NodeBookmarks)
     NodeBookmarks.create_bookmarks_interface()
 except ImportError:
     hou.ui.displayMessage("Module HoudiniNodeBookmarks not found.\nTry to reinstall the script.",
