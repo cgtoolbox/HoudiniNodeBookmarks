@@ -368,7 +368,7 @@ class About(QtWidgets.QDialog):
         main_layout.addWidget(QtWidgets.QLabel("Houdini Node Bookmarks"))
         main_layout.addWidget(QtWidgets.QLabel(""))
 
-        v = HoudiniNodeBookmarks.__VERSION__
+        v = HoudiniNodeBookmarks.__version__
         main_layout.addWidget(QtWidgets.QLabel("Version: " + v))
 
         link = '''<a href='http://cgtoolbox.com'>cgtoolbox.com</a>'''
@@ -1486,7 +1486,7 @@ class BookmarkView(QtWidgets.QWidget):
 
     def reset_filter(self):
 
-        for bkm in self.bookmarks.itervalues():
+        for bkm in self.bookmarks.values():
 
             if not bkm.collapsed:
 
@@ -1500,7 +1500,7 @@ class BookmarkView(QtWidgets.QWidget):
             self.reset_filter()
             return
 
-        for bkm in self.bookmarks.itervalues():
+        for bkm in self.bookmarks.values():
 
             if not bkm.collapsed:
 
@@ -1967,7 +1967,7 @@ class NodesBookmark(QtWidgets.QMainWindow):
             return None
 
         bookmark_data = {}
-        bookmark_data["version"] = HoudiniNodeBookmarks.__VERSION__
+        bookmark_data["version"] = HoudiniNodeBookmarks.__version__
 
         bookmark_data["linked_networks"] = [ntw.name() for ntw in \
                                             self.linked_network_views]

@@ -1,4 +1,5 @@
 $NAME:HoudiniNodeBookmarks
+$VERSION:scripts/python/HoudiniNodeBookmarks/__init__.py
 $DOC_LINK:cgtoolbox.com/houdini-node-bookmarks-2/
 scripts:scripts
 python_panels:python_panels
